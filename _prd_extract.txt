@@ -1,0 +1,213 @@
+<timestamp>Wednesday, Nov 4, 2026, 12:36 PM (UTC+7)</timestamp>
+<user_query>
+Perhatikan dan eksekusi perintah berdasarkan instruksi berikut yang saya kirimkan dalam file PDF. Dan saya juga melampirkan juga untuk schema sql nya 
+
+1. Peran dan Tujuan
+Kamu adalah senior Laravel backend engineer. Bangun REST API untuk Humify, aplikasi HRIS presensi. Yang dibangun hanya backend, tanpa UI. API dipakai oleh dua klien: aplikasi mobile (presensi, pengajuan cuti, review tim) dan web portal (workspace karyawan, review manager, administrasi HR, pengelolaan akun Super Admin).
+Hasil akhir: proyek Laravel yang dapat dijalankan, bermigrasi, ter-seed, teruji, dan terdokumentasi (OpenAPI).
+2. Konteks Produk
+Humify mencatat presensi dengan tiga verifikasi: wajah, lokasi (area kerja yang diizinkan), dan waktu (waktu server). Status presensi dihitung oleh backend, bukan oleh perangkat pengguna.
+Role	Kemampuan
+employee	Presensi sendiri, daftar wajah acuan (sekali), riwayat, saldo dan pengajuan cuti, ubah data kontak sendiri.
+manager	Semua kemampuan employee, ditambah review presensi dan pengajuan cuti bawahan langsung (supervisor_id), riwayat tim.
+hr_admin	Semua kemampuan employee, ditambah review di seluruh perusahaan, kelola karyawan, foto wajah acuan, shift, lokasi kerja, jenis cuti dan saldo awal, laporan bulanan.
+super_admin	Semua kemampuan hr_admin, ditambah kelola akun dan role. Hanya Super Admin yang boleh mengubah role.
+Tidak termasuk: lembur, payroll, notifikasi push, kalender hari libur nasional.
+3. Stack dan Konvensi
+•Laravel 12, PHP 8.3, MySql, Laravel Sanctum (personal access token untuk mobile dan web), Pest untuk test.
+•Arsitektur: Controller tipis, Form Request untuk validasi, Service/Action class untuk logika bisnis, Eloquent Model, API Resource untuk output, Policy untuk otorisasi, PHP backed enum untuk status.
+•Semua rute di bawah /api/v1. Respons JSON. Sukses: { data, meta }. Error: { message, code, errors } dengan code berupa SNAKE_CASE yang stabil (daftar di Bab 7).
+•Waktu disimpan sebagai timestamptz (UTC). Zona waktu perusahaan ada di tabel settings (default Asia/Jakarta), dan attendance_date dihitung berdasarkan zona itu.
+•employees dan users memakai UUID, tabel lain bigint.
+•Jangan memakai trigger database. Logika yang sebelumnya ada di trigger (potong saldo cuti, penandaan absensi cuti, validasi shift) ditulis di Service layer dalam transaksi database, lengkap dengan test.
+•Pilih opsi paling sederhana jika ada hal yang ambigu, lalu catat di bagian Asumsi pada README. Jangan berhenti untuk bertanya kecuali benar-benar terblokir.
+4. Skema Database
+Gunakan hris_schema.sql (lampiran) sebagai dasar untuk tabel: departments, positions, employees, users, work_shifts, attendances, leave_types, leave_balances, leave_requests. Tulis ulang sebagai migration Laravel (bukan menjalankan SQL mentah), dengan perubahan berikut.
+4.1 Nilai enum memakai bahasa Inggris
+Desain UI berbahasa Inggris, jadi seluruh nilai status di database dan API memakai nilai baru ini. Simpan sebagai kolom string dengan CHECK constraint, dan petakan ke PHP backed enum.
+Konsep	Nilai di skema SQL lama	Nilai baru (database dan API)
+Role	karyawan, manager, admin_hr, super_admin	employee, manager, hr_admin, super_admin
+Status presensi	hadir, terlambat, pulang_cepat, izin, sakit, cuti, alpha, libur	present, late, left_early, authorized_absence, sick_leave, on_leave, absent, day_off
+Status review presensi	pending, disetujui, ditolak	pending, approved, rejected
+Status pengajuan cuti	pending, disetujui, ditolak, dibatalkan	pending, approved, rejected, canceled
+Status karyawan	aktif, nonaktif, resign, cuti_panjang	active, inactive, resigned, long_leave
+Tipe kepegawaian	tetap, kontrak, magang, harian	permanent, contract, intern, daily
+Kategori kerja	is_shift_worker (boolean)	tetap boolean di database, diekspos API sebagai work_category: regular atau shifting
+4.2 Perubahan dan tabel tambahan
+Perubahan ini berasal dari desain UI dan belum ada di hris_schema.sql.
+•employees: tambah personal_email, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, face_registered_by (FK ke users, nullable). Kolom address dipakai sebagai alamat rumah.
+•work_shifts: start_time dan end_time dibuat nullable. Desain UI menampilkan kondisi shift belum dikonfigurasi, jadi shift yang jamnya masih kosong tidak boleh dipakai untuk check-in.
+•work_locations (baru): id, name, latitude, longitude, radius_meters, is_active. Dipakai untuk memvalidasi area kerja yang diizinkan (geofence) saat check-in dan check-out.
+•attendances: tambah untuk check-in dan check-out masing-masing work_location_id, geofence_valid (boolean), dan distance_m. Baris yang dibuat sistem dari cuti disetujui langsung berstatus review approved tanpa reviewed_by. Hari libur (Sabtu dan Minggu) tidak disimpan, tetapi disintesis oleh API sebagai day_off dengan review not_applicable. Kolom review_note dipakai untuk catatan approve (opsional) dan alasan reject (wajib).
+•attendance_attempts (baru, hanya ditambah, tidak diubah): id, employee_id, type (check_in atau check_out), outcome, failure_code, face_score, distance_m, work_location_id, created_at. Mencatat setiap percobaan, termasuk yang gagal. Foto dari percobaan gagal tidak disimpan.
+•leave_types: tambah attendance_status (on_leave, sick_leave, atau authorized_absence) agar penandaan absensi saat cuti disetujui mengikuti jenis cuti, dan tracks_balance (boolean).
+•leave_requests: tambah canceled_by (FK ke users) dan canceled_at.
+•settings (baru): key (unik) dan value (jsonb). Isi awal: company_timezone, face_match_threshold (default 80), close_day_time.
+•audit_logs (baru): id, actor_user_id, action, subject_type, subject_id, changes (jsonb), ip, created_at.
+•Index: unik (employee_id, attendance_date) pada attendances; (review_status, attendance_date); (status, start_date) pada leave_requests.
+5. Aturan Bisnis
+5.1 Autentikasi
+Login memakai username dan password. Batasi 5 percobaan per menit per kombinasi username dan IP; jika terlampaui kembalikan 429 dengan retry_after. Semua kegagalan login lain memakai pesan generik yang sama (tidak membedakan username salah atau password salah). Akun nonaktif atau karyawan yang tidak berstatus active tidak bisa login.
+5.2 Cakupan data
+•employee: hanya data milik sendiri.
+•manager: data sendiri ditambah bawahan langsung (employees.supervisor_id sama dengan karyawan yang login), tidak rekursif.
+•hr_admin dan super_admin: seluruh perusahaan.
+•Tidak seorang pun boleh me-review record miliknya sendiri.
+5.3 Kategori kerja dan shift
+Karyawan regular hanya boleh memilih shift berkategori regular. Karyawan shifting hanya boleh memilih shift berkategori shifting (Shift 1, 2, 3). Validasi dilakukan di server.
+5.4 Foto wajah acuan
+Karyawan mendaftarkan sendiri sekali. Setelah terdaftar, hanya hr_admin atau super_admin yang dapat menggantinya, dan penggantian memerlukan konfirmasi eksplisit serta masuk audit_logs. Check-in dan check-out ditolak jika wajah acuan belum terdaftar.
+5.5 Check-in dan check-out
+Urutan validasi:
+1.Pengguna terautentikasi dan karyawan berstatus active.
+2.Wajah acuan sudah terdaftar.
+3.(Check-in) Shift valid untuk kategori kerja dan jamnya sudah dikonfigurasi.
+4.Tidak duplikat. Jika sudah check-in, kembalikan 409 ALREADY_CHECKED_IN beserta record yang sudah ada di data, supaya klien yang kehilangan respons dapat memulihkan keadaan tanpa membuat data ganda. Dukung juga header Idempotency-Key.
+5.Geofence: hitung jarak Haversine ke setiap work_locations aktif. Valid jika berada dalam radius salah satunya.
+6.Verifikasi wajah lewat interface FaceVerifier (hasil: matched dan score), dibandingkan dengan face_match_threshold.
+7.Simpan dalam satu transaksi dan catat di attendance_attempts. Waktu yang tercatat adalah waktu server, bukan waktu dari perangkat.
+Jika langkah 5 atau 6 gagal, tidak ada presensi yang tersimpan (hanya attendance_attempts), dan respons 422 membawa kode OUTSIDE_PERMITTED_AREA atau FACE_MISMATCH. Jika layanan verifikasi wajah timeout atau error, kembalikan 503 FACE_SERVICE_UNAVAILABLE dan jangan menyimpan apa pun.
+Respons sukses memuat: waktu terkonfirmasi server, shift, status, review_status pending, hasil wajah (verified, score), dan hasil lokasi (valid, nama lokasi kerja).
+Check-out mencari presensi terbuka terbaru (ada check-in, belum ada check-out) dalam 24 jam terakhir, lalu mengharuskan verifikasi wajah dan lokasi yang sama.
+Buat FaceVerifier sebagai interface dengan driver fake (untuk development dan test, dapat dikonfigurasi cocok atau tidak) dan satu kerangka driver penyedia nyata. Jangan mengunci ke vendor tertentu.
+5.6 Perhitungan status (tanpa toleransi)
+•late jika check_in melewati start_time shift pada attendance_date. late_minutes = pembulatan ke atas dari selisih detik dibagi 60.
+•Saat check-out sebelum end_time: early_leave_minutes dihitung dengan cara yang sama. Status menjadi left_early hanya jika karyawan tidak terlambat. Karyawan yang terlambat tetap late, dan menit pulang cepatnya tetap tersimpan.
+•work_minutes = selisih check-in dan check-out.
+•Shift overnight: end_time jatuh di hari berikutnya, dan attendance_date adalah tanggal check-in.
+5.7 Hari kerja dan penutupan hari
+Hari kerja adalah Senin sampai Jumat; tidak ada kalender libur nasional. Buat Artisan command terjadwal attendance:close-day (jalan harian pada close_day_time) yang membuat record absent dengan review pending untuk setiap karyawan aktif yang tidak punya presensi dan tidak punya cuti disetujui pada hari kerja sebelumnya. Command harus idempoten.
+5.8 Review presensi
+Hanya record berstatus review pending yang dapat di-review. Approve (catatan opsional) atau reject (alasan wajib). Isi reviewed_by, reviewed_at, review_note. Record yang sudah diputuskan bersifat read-only (409 ALREADY_RESOLVED). Menyetujui presensi tidak menyetujui cuti.
+5.9 Pengajuan cuti
+•Submit: jenis cuti aktif, start_date tidak setelah end_date, total_days dihitung server (jumlah hari kerja dalam rentang) dan harus lebih dari 0, tidak tumpang tindih dengan pengajuan pending atau approved milik sendiri, dan lampiran wajib jika jenis cuti mensyaratkannya (pdf/jpg/png, maksimal 5 MB, disimpan privat). Saldo tidak berubah saat pending.
+•Approve (satu transaksi): periksa ulang saldo bila tracks_balance (jika kurang, 422 INSUFFICIENT_BALANCE); tambah used_days; buat atau perbarui attendances untuk tiap hari kerja dalam rentang dengan status dari leave_types.attendance_status dan review approved. Jangan menimpa record yang sudah memiliki check_in_time; kembalikan daftar tanggal yang dilewati di meta.
+•Reject: alasan wajib dan terlihat oleh karyawan.
+•Cancel: hanya pemilik dan hanya saat pending (isi canceled_by dan canceled_at). Membatalkan pengajuan yang sudah disetujui tidak didukung pada MVP (409).
+5.10 Menonaktifkan karyawan
+Set status karyawan menjadi inactive, nonaktifkan akun login, cabut semua token. Data historis tetap utuh. Endpoint memerlukan konfirmasi eksplisit.
+5.11 Laporan bulanan
+Hitung dari record berstatus review approved secara default; parameter include_pending=true menyertakan yang pending. Metrik: present_days (present, late, left_early), late_records, late_minutes, leave_days (on_leave, sick_leave, authorized_absence), absent_days.
+6. Endpoint
+Semua path berada di bawah /api/v1. Kolom Akses: login berarti semua role yang sudah login (data sendiri), M berarti manager (hanya bawahan langsung), H berarti hr_admin dan super_admin, S berarti super_admin. Endpoint daftar memakai paginasi page dan per_page (default 15, maksimum 100).
+6.1 Autentikasi dan profil
+Method	Path	Akses	Keterangan
+POST	/auth/login	publik	Body: username, password, device_name. Respons: token, data user (id, username, role), dan ringkasan karyawan (id, kode, nama, departemen, jabatan, work_category, face_registered).
+POST	/auth/logout	login	Mencabut token saat ini.
+GET	/me	login	Profil read-only: data kepegawaian, atasan langsung, work_category, face_registered, face_registered_at.
+PATCH	/me/contact	login	Hanya phone, personal_email, address, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship. Field lain ditolak.
+POST	/me/face-reference	login	Multipart photo. Hanya bila belum terdaftar, selain itu 409 FACE_ALREADY_REGISTERED.
+6.2 Presensi
+Method	Path	Akses	Keterangan
+GET	/attendance/today	login	Kartu hari ini: work_category, shift yang tersedia, record hari ini, face_registered, dan next_action (register_face, check_in, check_out, atau done).
+GET	/shifts/available	login	Shift aktif yang sesuai kategori kerja karyawan.
+POST	/attendance/check-in	login	Multipart: shift_id, photo, latitude, longitude. Header opsional Idempotency-Key. Aturan di 5.5.
+POST	/attendance/check-out	login	Multipart: photo, latitude, longitude.
+GET	/attendance/records	login	Query: scope (mine, team, company), month (YYYY-MM), view (recorded atau absences), status, review_status, q, page. Scope team untuk M dan H, company untuk H. Sertakan baris sintetis day_off.
+GET	/attendance/records/{id}	sesuai scope	Detail: shift, jam, status, review, nama dan catatan reviewer, hasil wajah dan lokasi. Tidak memuat foto.
+GET	/attendance/records/{id}/photo	M, H	Foto presensi lewat signed URL berumur pendek. Pemilik record tidak boleh mengakses.
+POST	/attendance/records/{id}/approve	M, H	Body: note (opsional).
+POST	/attendance/records/{id}/reject	M, H	Body: reason (wajib).
+6.3 Cuti
+Method	Path	Akses	Keterangan
+GET	/leave/types	login	Jenis cuti aktif beserta requires_attachment dan tracks_balance.
+POST	/leave/types	H	Buat jenis cuti.
+PATCH	/leave/types/{id}	H	Ubah atau nonaktifkan. Tidak ada hard delete.
+GET	/leave/balances	login	Query year. Milik sendiri; H boleh memakai employee_id.
+PUT	/leave/balances	H	Upsert saldo awal: employee_id, leave_type_id, year, total_days. Tidak boleh di bawah used_days.
+GET	/leave/requests	login	Query: scope (mine, team, company), status, year, type, q.
+POST	/leave/requests	login	Multipart: leave_type_id, start_date, end_date, reason, attachment (jika wajib).
+GET	/leave/requests/{id}	sesuai scope	Detail termasuk keputusan, reviewer, dan alasan penolakan.
+POST	/leave/requests/{id}/cancel	pemilik	Hanya saat pending.
+GET	/leave/requests/{id}/attachment	pemilik, M, H	Lampiran lewat signed URL berumur pendek.
+POST	/leave/requests/{id}/approve	M, H	Aturan di 5.9.
+POST	/leave/requests/{id}/reject	M, H	Body: reason (wajib).
+6.4 Dashboard
+Method	Path	Akses	Keterangan
+GET	/dashboard/employee	login	Sisa saldo cuti, jumlah pengajuan pending, presensi terbaru.
+GET	/dashboard/team	M	Jumlah presensi dan pengajuan pending bawahan, serta ringkasan tim hari ini (hadir, terlambat, tidak hadir).
+GET	/dashboard/hr	H	Jumlah antrean review presensi dan cuti seluruh perusahaan.
+6.5 Administrasi HR
+Method	Path	Akses	Keterangan
+GET	/employees	H	Query: q, department_id, status, work_category, page.
+POST	/employees	H	Buat karyawan (data pribadi, departemen, jabatan, atasan, tipe kepegawaian, work_category). Status awal active.
+GET	/employees/{id}	H	Detail karyawan.
+PATCH	/employees/{id}	H	Ubah atasan langsung, status, tipe kepegawaian, work_category, departemen, jabatan.
+POST	/employees/{id}/deactivate	H	Body: confirm=true. Aturan di 5.10.
+GET	/employees/{id}/face-reference	H	Metadata (kapan dan oleh siapa) dan foto lewat signed URL.
+PUT	/employees/{id}/face-reference	H	Multipart photo dan confirm=true. Mengisi face_registered_at dan face_registered_by, serta tercatat di audit.
+GET	/departments dan /positions	login	Untuk dropdown.
+POST, PATCH	/departments dan /positions	H	CRUD minimal.
+GET	/shifts	H	Semua shift termasuk yang nonaktif.
+POST, PATCH	/shifts dan /shifts/{id}	H	name, start_time, end_time, category, is_overnight, is_active. Tidak ada hard delete.
+GET, POST, PATCH	/work-locations dan /work-locations/{id}	H	Kelola area kerja yang diizinkan.
+GET	/reports/attendance-monthly	H	Query: month, department_id, employee_id, include_pending, format (json atau csv). Respons: total metrik (5.11) dan baris per karyawan.
+6.6 Super Admin
+Method	Path	Akses	Keterangan
+GET	/accounts	S	Query: q, role, is_active.
+POST	/accounts	S	employee_id, username, password, role. Satu akun per karyawan.
+PATCH	/accounts/{id}	S	role, is_active, atau reset password. Tidak boleh menurunkan role atau menonaktifkan akun sendiri.
+GET, PUT	/settings	GET: H, PUT: S	Zona waktu perusahaan, ambang kecocokan wajah, jam penutupan hari.
+7. Keamanan, Audit, dan Kode Error
+•File privat: foto dan lampiran disimpan di disk privat dengan nama acak. Tidak ada URL publik; akses lewat endpoint terotorisasi atau signed URL berumur 5 menit.
+•Validasi upload: foto jpg atau png maksimal 5 MB; lampiran pdf, jpg, atau png maksimal 5 MB.
+•Rate limit: login 5 per menit; check-in dan check-out 10 per menit per pengguna.
+•Privasi: lokasi hanya diperiksa saat aksi presensi dan tidak dilacak terus-menerus. Jangan menulis foto atau koordinat mentah ke log aplikasi.
+•Audit: audit_logs wajib untuk approve dan reject presensi atau cuti, penggantian foto acuan, perubahan akun dan role, deaktivasi karyawan, dan perubahan settings.
+•Otorisasi: setiap resource punya Policy, dan setiap role diuji di test otorisasi.
+•Lain-lain: CORS dikonfigurasi untuk domain web portal, dan masa berlaku token dapat diatur lewat konfigurasi.
+Kode	HTTP	Arti
+INVALID_CREDENTIALS	401	Username atau password salah.
+TOO_MANY_ATTEMPTS	429	Login dibatasi; ada retry_after.
+FORBIDDEN	403	Tidak punya hak akses atau di luar cakupan data.
+VALIDATION_ERROR	422	Validasi input gagal.
+FACE_NOT_REGISTERED	422	Wajah acuan belum terdaftar.
+FACE_ALREADY_REGISTERED	409	Wajah acuan sudah terdaftar; hanya HR yang dapat menggantinya.
+FACE_MISMATCH	422	Wajah tidak cocok.
+FACE_SERVICE_UNAVAILABLE	503	Layanan verifikasi wajah tidak tersedia; tidak ada yang tersimpan.
+OUTSIDE_PERMITTED_AREA	422	Lokasi di luar area kerja yang diizinkan.
+SHIFT_NOT_ALLOWED	422	Shift tidak sesuai kategori kerja.
+SHIFT_NOT_CONFIGURED	422	Jam shift belum dikonfigurasi.
+ALREADY_CHECKED_IN	409	Sudah check-in; data berisi record yang ada.
+NOT_CHECKED_IN	409	Tidak ada check-in terbuka untuk di-check-out.
+ALREADY_CHECKED_OUT	409	Sudah check-out.
+ALREADY_RESOLVED	409	Record atau pengajuan sudah diputuskan.
+INSUFFICIENT_BALANCE	422	Saldo cuti tidak cukup saat approve.
+REQUEST_OVERLAP	422	Rentang tanggal bertabrakan dengan pengajuan lain.
+ATTACHMENT_REQUIRED	422	Jenis cuti ini mewajibkan lampiran.
+8. Data Seeder
+Buat seeder demo yang meniru data pada desain UI:
+•Departemen: Product Design, Engineering, Operations, Finance.
+•Akun satu per role: Alex Morgan (employee), Maya Chen (manager, atasan langsung Alex Morgan dan beberapa karyawan lain di Product Design), Sofia Patel (hr_admin), Daniel Brooks (super_admin). Password demo diambil dari .env.
+•Shift: Regular, Shift 1, Shift 2, Shift 3 dengan jam belum dikonfigurasi (null). Environment testing mengisi jam contoh.
+•Jenis cuti: Annual Leave (tracks_balance true, status absensi on_leave, saldo awal 12 hari), Sick Leave (lampiran wajib, tanpa saldo, status sick_leave), Authorized Absence (tanpa saldo, status authorized_absence).
+•Lokasi kerja: satu lokasi bernama Demo Office dengan koordinat placeholder dan radius 100 meter, dapat diubah lewat .env.
+•Beberapa record presensi dan pengajuan cuti dengan berbagai status untuk mengisi layar riwayat dan review.
+9. Pengujian dan Urutan Kerja
+Kerjakan berurutan, dan di akhir tiap fase jalankan test sampai hijau.
+1.Setup proyek, migration, model, enum, dan seeder dasar.
+2.Autentikasi (login, throttle, logout), /me, ubah kontak, dan akun Super Admin.
+3.Master data: karyawan, departemen, jabatan, shift, lokasi kerja, settings.
+4.Presensi: wajah acuan, check-in, check-out, riwayat, dan command attendance:close-day.
+5.Review presensi dan akses foto terproteksi.
+6.Cuti: jenis, saldo, pengajuan, approve, reject, cancel, dan lampiran.
+7.Dashboard dan laporan bulanan.
+8.Dokumentasi OpenAPI dan README.
+Test wajib (Pest feature test):
+•Login berhasil, gagal dengan pesan generik, dan throttle 429.
+•Manager hanya melihat bawahan langsung; employee tidak dapat memakai scope team atau company; tidak ada yang dapat me-review record sendiri.
+•Check-in: sukses, wajah tidak cocok, di luar area, layanan wajah error, duplikat (409 beserta record), shift tidak sesuai kategori, shift belum dikonfigurasi, wajah belum terdaftar.
+•Perhitungan late_minutes tanpa toleransi, left_early hanya bila tidak terlambat, dan shift overnight.
+•Check-out tanpa check-in (409).
+•Approve presensi, reject tanpa alasan (422), dan approve ulang (409).
+•Cuti: saldo tidak berubah saat pending; approve memotong saldo dan membuat record presensi sesuai attendance_status tanpa menimpa record yang punya check-in; saldo kurang saat approve; overlap; lampiran wajib; cancel hanya oleh pemilik dan hanya saat pending.
+•attendance:close-day membuat record absent dan bersifat idempoten.
+•Akun: hr_admin tidak dapat mengubah role, dan Super Admin tidak dapat menurunkan role sendiri.
+•Laporan bulanan: angka sesuai dan hanya menghitung record approved secara default.
+10. Hasil Akhir yang Diharapkan
+•php artisan migrate:fresh --seed berjalan tanpa error, dan composer test hijau.
+•Dokumentasi OpenAPI (mis. Scribe) yang memuat semua endpoint, contoh request dan respons, serta daftar kode error.
+•Koleksi Postman atau file .http untuk mencoba alur utama.
+•README.md berisi cara menjalankan, variabel .env (termasuk driver FaceVerifier, disk privat, zona waktu), jadwal command, dan bagian Asumsi.
+•.env.example yang lengkap.@c:\Users\Acer\Downloads\hris_presensi_mysql.sql @c:\Users\Acer\Desktop\Kuliah (Campur 2026)\PRD Backend API Humify.pdf 
+</user_query>
