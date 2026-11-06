@@ -81,7 +81,7 @@
                                     {{ $lt->max_days_per_year ? $lt->max_days_per_year . ' days' : 'Flexible' }}
                                 </td>
                                 <td class="px-6 py-3.5 text-slate-600">
-                                    {{ $lt->requires_attachment ? 'Yes (Dokumen Wajib)' : 'No' }}
+                                    {{ $lt->requires_attachment ? 'Yes' : 'No' }}
                                 </td>
                                 <td class="px-6 py-3.5 text-right">
                                     <button
@@ -103,7 +103,7 @@
                         @empty
                             <tr>
                                 <td colspan="5" class="px-6 py-10 text-center text-xs text-slate-400">
-                                    Belum ada jenis cuti/izin yang dikonfigurasi.
+                                    No leave types configured.
                                 </td>
                             </tr>
                         @endforelse
@@ -211,7 +211,7 @@
                         @empty
                             <tr>
                                 <td colspan="7" class="px-6 py-10 text-center text-xs text-slate-400">
-                                    Tidak ada alokasi saldo cuti tercatat untuk tahun {{ $currentYear }}.
+                                    No leave balance allocations recorded for year {{ $currentYear }}.
                                 </td>
                             </tr>
                         @endforelse
@@ -239,7 +239,7 @@
                 @csrf
                 <div>
                     <label for="lt_name" class="block text-xs font-semibold text-slate-700 mb-1">Leave Type Name *</label>
-                    <input type="text" id="lt_name" name="name" required placeholder="e.g. Cuti Menikah" class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
+                    <input type="text" id="lt_name" name="name" required placeholder="e.g. Marriage Leave" class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
                 </div>
 
                 <div>
@@ -250,12 +250,12 @@
                 <div class="space-y-2 pt-2">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="is_paid" value="1" checked class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300">
-                        <span class="text-xs text-slate-700">Paid Leave (Cuti Berbayar)</span>
+                        <span class="text-xs text-slate-700">Paid Leave</span>
                     </label>
 
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="requires_attachment" value="1" class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300">
-                        <span class="text-xs text-slate-700">Requires Supporting Document (Surat Keterangan/Dokumen Wajib)</span>
+                        <span class="text-xs text-slate-700">Requires Supporting Document (Doctor Note/Certificate)</span>
                     </label>
                 </div>
 

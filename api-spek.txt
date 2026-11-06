@@ -1,0 +1,621 @@
+================================================================================
+                    HUMIFY HRIS - REST API SPECIFICATION v1.0
+             Panduan Lengkap Integrasi Frontend (Mobile & Web)
+================================================================================
+
+INFORMASI UMUM
+--------------
+Base URL (Local Dev) : http://[IP_LAPTOP_ATAU_10.0.2.2]:8000/api/v1
+Format Data           : JSON (kecuali upload berkas/foto menggunakan multipart/form-data)
+Zona Waktu            : Asia/Jakarta (WIB)
+Standar Header Request:
+  - Accept        : application/json (Wajib di semua request)
+  - Content-Type  : application/json (Gunakan multipart/form-data jika mengunggah file)
+  - Authorization : Bearer <ACCESS_TOKEN> (Wajib untuk semua endpoint berproteksi)
+
+Format Standar Response Sukses:
+{
+  "success": true,
+  "message": "Pesan sukses deskriptif",
+  "data": { ... } // Objek atau Array data
+}
+
+Format Standar Response Error:
+{
+  "message": "Deskripsi pesan kesalahan",
+  "code": "KODE_ERROR", // Contoh: VALIDATION_ERROR, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND
+  "errors": { ... } // Detail error validasi per field (jika ada)
+}
+
+Kode Status HTTP:
+- 200 OK                    : Permintaan berhasil diproses.
+- 201 Created               : Sumber data baru berhasil dibuat.
+- 400 Bad Request           : Parameter atau input tidak valid.
+- 401 Unauthorized          : Belum login, token tidak ada, atau sesi berakhir.
+- 403 Forbidden             : Role akun tidak memiliki izin akses (kewenangan ditolak).
+- 404 Not Found             : Data tidak ditemukan atau rute salah.
+- 422 Unprocessable Content : Validasi gagal (misal field kurang atau aturan bisnis dilanggar).
+- 500 Internal Server Error : Kesalahan internal pada server.
+
+================================================================================
+BAGIAN 1: AUTENTIKASI (AUTH)
+================================================================================
+
+1.1. Health Check / Ping
+------------------------
+Endpoint : GET /ping
+Auth     : Publik (Tanpa Token)
+Deskripsi: Memeriksa konektivitas jaringan antara Frontend Mobile dan Backend Laravel.
+
+Response 200 OK:
+{
+  "message": "Humify API v1 is ready."
+}
+
+1.2. Login Pengguna
+-------------------
+Endpoint : POST /auth/login
+Auth     : Publik
+Deskripsi: Masuk ke aplikasi menggunakan username dan password yang diberikan perusahaan.
+
+Request Body (JSON):
+{
+  "username": "alex.morgan", // string, required
+  "password": "password123"  // string, required
+}
+
+Response 200 OK:
+{
+  "success": true,
+  "message": "Login berhasil",
+  "data": {
+    "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...", // Bearer token
+    "token_type": "Bearer",
+    "expires_in": 86400, // Detik (24 Jam)
+    "user": {
+      "id": "b5ce3331-d0c6-4219-b5a0-76981bf19e32",
+      "username": "alex.morgan",
+      "role": "karyawan", // Enum: super_admin | admin_hr | manager | karyawan
+      "employee": {
+        "id": "c62cf0cb-d85c-4cc4-b588-3673d11cd9bd",
+        "employee_code": "EMP-001",
+        "full_name": "Alex Morgan",
+        "email": "alex.morgan@humify.test",
+        "phone": "081234567001",
+        "gender": "L",
+        "birth_place": "Bandung",
+        "birth_date": "1994-11-18",
+        "address": "Jl. Kemang Raya No. 15, Jakarta Selatan",
+        "photo_url": null,
+        "face_registered": true,
+        "department": {
+          "id": 4,
+          "name": "Product Design"
+        },
+        "position": {
+          "id": 6,
+          "name": "Product Designer"
+        },
+        "supervisor": {
+          "id": "fca1a42e-d444-4e0a-9812-97ae47409eb2",
+          "full_name": "Maya Chen"
+        },
+        "employment_type": "tetap",
+        "employee_status": "aktif",
+        "is_shift_worker": false
+      }
+    }
+  }
+}
+
+Response 401 Unauthorized:
+{
+  "message": "Username atau password salah.",
+  "code": "INVALID_CREDENTIALS",
+  "errors": null
+}
+
+1.3. Logout
+-----------
+Endpoint : POST /auth/logout
+Auth     : Bearer Token
+Deskripsi: Menghapus token aktif dan mengakhiri sesi.
+
+Response 200 OK:
+{
+  "success": true,
+  "message": "Berhasil logout."
+}
+
+1.4. Profil Pengguna Saat Ini
+-----------------------------
+Endpoint : GET /auth/me
+Auth     : Bearer Token
+Deskripsi: Mengambil informasi akun dan profil karyawan yang sedang login.
+
+Response 200 OK:
+{
+  "success": true,
+  "data": {
+    "id": "b5ce3331-d0c6-4219-b5a0-76981bf19e32",
+    "username": "alex.morgan",
+    "role": "karyawan",
+    "employee": { ... }
+  }
+}
+
+================================================================================
+BAGIAN 2: DATA PROFIL KARYAWAN (PROFILE)
+================================================================================
+
+2.1. Perbarui Data Personal Karyawan
+------------------------------------
+Endpoint : PUT /profile
+Auth     : Bearer Token
+Deskripsi: Memperbarui data kontak personal yang diizinkan untuk diubah oleh karyawan.
+           Field jabatan, departemen, role, dan shift bersifat read-only bagi karyawan.
+
+Request Body (JSON):
+{
+  "phone": "081234567890",             // string (numeric digits), nullable, max:20
+  "email": "alex.personal@gmail.com",  // string, email, nullable, max:150
+  "address": "Jl. Bangka Raya No. 20", // string, nullable, max:500
+  "birth_place": "Bandung",            // string, nullable, max:100
+  "birth_date": "1994-11-18",          // string, date (YYYY-MM-DD), nullable
+  "gender": "L"                        // string, in: L, P, nullable
+}
+
+Response 200 OK:
+{
+  "success": true,
+  "message": "Data personal berhasil diperbarui.",
+  "data": {
+    "phone": "081234567890",
+    "email": "alex.personal@gmail.com",
+    "address": "Jl. Bangka Raya No. 20",
+    "birth_place": "Bandung",
+    "birth_date": "1994-11-18",
+    "gender": "L"
+  }
+}
+
+================================================================================
+BAGIAN 3: PRESENSI & JADWAL KERJA (ATTENDANCE) - MOBILE ONLY
+================================================================================
+
+Aturan Bisnis Presensi:
+1. Hanya dilakukan melalui aplikasi Mobile React Native (tidak tersedia di Web Portal).
+2. Memerlukan verifikasi koordinat GPS (Geofencing radius 100m dari kantor) dan foto wajah selfie.
+3. Karyawan regular wajib check-in pada shift regular. Karyawan shifting wajib memilih shift shifting.
+4. Keterlambatan dihitung otomatis jika check-in melewati jam mulai shift.
+
+3.1. Status Presensi & Shift Hari Ini
+-------------------------------------
+Endpoint : GET /attendances/today
+Auth     : Bearer Token
+Deskripsi: Mengambil status presensi hari ini dan jadwal shift yang berlaku.
+
+Response 200 OK:
+{
+  "success": true,
+  "data": {
+    "date": "2026-11-05",
+    "has_checked_in": true,
+    "has_checked_out": false,
+    "assigned_shift": {
+      "id": 1,
+      "name": "Regular",
+      "start_time": "08:00:00",
+      "end_time": "17:00:00",
+      "category": "regular"
+    },
+    "attendance": {
+      "id": 142,
+      "check_in_time": "2026-11-05 08:12:00",
+      "check_out_time": null,
+      "status": "terlambat", // enum: hadir | terlambat | pulang_cepat | izin | sakit | cuti | alpha | libur
+      "late_minutes": 12,
+      "review_status": "pending", // enum: pending | disetujui | ditolak
+      "check_in_face_verified": true,
+      "check_in_face_score": 95.50
+    }
+  }
+}
+
+3.2. Check-In Presensi (Masuk)
+------------------------------
+Endpoint : POST /attendances/check-in
+Auth     : Bearer Token
+Header   : Content-Type: multipart/form-data
+Deskripsi: Melakukan absen masuk dengan validasi AI biometrik wajah dan geofence GPS.
+
+Form-Data Request:
+- latitude       : -6.2087634 (numeric, required) - Koordinat latitude perangkat
+- longitude      : 106.845599 (numeric, required) - Koordinat longitude perangkat
+- shift_id       : 1 (integer, optional/required jika shifting worker)
+- face_photo     : [File Image, image/jpeg, max: 4MB, required] - Foto selfie kamera depan
+
+Response 200 OK (Presensi Berhasil):
+{
+  "success": true,
+  "message": "Check-in berhasil tercatat.",
+  "data": {
+    "attendance_id": 143,
+    "attendance_date": "2026-11-05",
+    "check_in_time": "2026-11-05 07:55:10",
+    "status": "hadir",
+    "late_minutes": 0,
+    "face_score": 96.8,
+    "face_verified": true,
+    "review_status": "disetujui"
+  }
+}
+
+Response 422 Unprocessable Content (Contoh: Di Luar Radius Kantor):
+{
+  "message": "Anda berada di luar area kantor yang diizinkan (Radius maksimal 100m).",
+  "code": "GEOFENCE_OUT_OF_RANGE",
+  "errors": {
+    "location": ["Jarak Anda saat ini 450 meter dari kantor."]
+  }
+}
+
+Response 422 Unprocessable Content (Contoh: Wajah Tidak Cocok):
+{
+  "message": "Verifikasi wajah gagal. Skor kecocokan di bawah batas minimal 80%.",
+  "code": "FACE_VERIFICATION_FAILED",
+  "errors": {
+    "face_score": ["Skor 62.4% (Threshold minimal 80.0%)."]
+  }
+}
+
+3.3. Check-Out Presensi (Pulang)
+--------------------------------
+Endpoint : POST /attendances/check-out
+Auth     : Bearer Token
+Header   : Content-Type: multipart/form-data
+Deskripsi: Melakukan absen pulang dengan validasi AI biometrik wajah dan geofence GPS.
+
+Form-Data Request:
+- latitude   : -6.2087634 (numeric, required)
+- longitude  : 106.845599 (numeric, required)
+- face_photo : [File Image, image/jpeg, max: 4MB, required]
+
+Response 200 OK:
+{
+  "success": true,
+  "message": "Check-out berhasil tercatat. Terima kasih atas kerja keras Anda hari ini.",
+  "data": {
+    "attendance_id": 143,
+    "check_out_time": "2026-11-05 17:05:22",
+    "early_leave_minutes": 0,
+    "work_minutes": 550,
+    "face_verified": true
+  }
+}
+
+3.4. Riwayat Presensi Personal
+------------------------------
+Endpoint : GET /attendances/history
+Auth     : Bearer Token
+Query Params:
+  - month : integer (1 - 12, default: bulan saat ini)
+  - year  : integer (contoh: 2026, default: tahun saat ini)
+  - page  : integer (default: 1)
+
+Response 200 OK:
+{
+  "success": true,
+  "data": {
+    "summary": {
+      "total_present": 18,
+      "total_late": 2,
+      "total_leave": 1,
+      "total_sick": 0
+    },
+    "history": [
+      {
+        "id": 140,
+        "date": "2026-11-04",
+        "shift_name": "Regular (08:00 - 17:00)",
+        "check_in_time": "08:45:00",
+        "check_out_time": "17:10:00",
+        "status": "hadir",
+        "late_minutes": 0,
+        "review_status": "disetujui",
+        "review_note": null
+      },
+      {
+        "id": 139,
+        "date": "2026-11-03",
+        "shift_name": "Regular (08:00 - 17:00)",
+        "check_in_time": "08:15:00",
+        "check_out_time": "17:05:00",
+        "status": "terlambat",
+        "late_minutes": 15,
+        "review_status": "disetujui",
+        "review_note": "Macet di jalur utama"
+      }
+    ]
+  }
+}
+
+================================================================================
+BAGIAN 4: IZIN, CUTI, DAN SAKIT (LEAVE & PERMITS)
+================================================================================
+
+4.1. Daftar Jenis Cuti / Izin (Master Data)
+-------------------------------------------
+Endpoint : GET /leaves/types
+Auth     : Bearer Token
+Deskripsi: Mengambil daftar jenis cuti/izin aktif yang dapat dipilih oleh karyawan.
+
+Response 200 OK:
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Annual leave",
+      "is_paid": true,
+      "max_days_per_year": 12,
+      "requires_attachment": false
+    },
+    {
+      "id": 2,
+      "name": "Personal leave",
+      "is_paid": true,
+      "max_days_per_year": 3,
+      "requires_attachment": false
+    },
+    {
+      "id": 3,
+      "name": "Sick",
+      "is_paid": true,
+      "max_days_per_year": null,
+      "requires_attachment": true // Memerlukan surat dokter
+    },
+    {
+      "id": 4,
+      "name": "Permission",
+      "is_paid": true,
+      "max_days_per_year": null,
+      "requires_attachment": false
+    }
+  ]
+}
+
+4.2. Saldo Cuti Karyawan
+------------------------
+Endpoint : GET /leaves/balances
+Auth     : Bearer Token
+Query Params:
+  - year : integer (default: tahun berjalan)
+
+Response 200 OK:
+{
+  "success": true,
+  "data": [
+    {
+      "leave_type_id": 1,
+      "leave_type_name": "Annual leave",
+      "year": 2026,
+      "total_days": 12.0,
+      "used_days": 4.0,
+      "remaining_days": 8.0
+    },
+    {
+      "leave_type_id": 2,
+      "leave_type_name": "Personal leave",
+      "year": 2026,
+      "total_days": 3.0,
+      "used_days": 1.0,
+      "remaining_days": 2.0
+    }
+  ]
+}
+
+4.3. Riwayat Permohonan Izin / Cuti
+-----------------------------------
+Endpoint : GET /leaves/requests
+Auth     : Bearer Token
+Query Params:
+  - status : string, optional (pending | disetujui | ditolak | dibatalkan)
+  - year   : integer, optional
+
+Response 200 OK:
+{
+  "success": true,
+  "data": [
+    {
+      "id": 24,
+      "leave_type": {
+        "id": 1,
+        "name": "Annual leave"
+      },
+      "start_date": "2026-11-10",
+      "end_date": "2026-11-12",
+      "total_days": 3.0,
+      "reason": "Acara keluarga di kampung halaman",
+      "attachment_url": null,
+      "status": "pending", // enum: pending | disetujui | ditolak | dibatalkan
+      "rejection_reason": null,
+      "created_at": "2026-11-05 10:20:00"
+    }
+  ]
+}
+
+4.4. Ajukan Permohonan Cuti / Izin Baru
+---------------------------------------
+Endpoint : POST /leaves/requests
+Auth     : Bearer Token
+Header   : Content-Type: multipart/form-data
+Deskripsi: Mengirimkan pengajuan izin/cuti baru dari aplikasi mobile.
+
+Form-Data Request:
+- leave_type_id : 1 (integer, required)
+- start_date    : "2026-11-15" (date YYYY-MM-DD, required)
+- end_date      : "2026-11-16" (date YYYY-MM-DD, required, >= start_date)
+- total_days    : 2.0 (numeric, required)
+- reason        : "Keperluan keluarga mendesak" (string, required, max: 500)
+- attachment    : [File Image/PDF, max: 5MB, optional / wajib jika jenis cuti requires_attachment = true]
+
+Response 201 Created:
+{
+  "success": true,
+  "message": "Pengajuan cuti berhasil diajukan dan sedang menunggu persetujuan atasan.",
+  "data": {
+    "request_id": 25,
+    "status": "pending",
+    "total_days": 2.0
+  }
+}
+
+Response 422 Unprocessable Content (Contoh Saldo Tidak Mencukupi):
+{
+  "message": "Sisa saldo cuti Anda tidak mencukupi untuk jumlah hari yang diajukan.",
+  "code": "INSUFFICIENT_LEAVE_BALANCE",
+  "errors": {
+    "total_days": ["Sisa saldo cuti: 1 hari. Diajukan: 2 hari."]
+  }
+}
+
+4.5. Batalkan Permohonan Cuti (Mobile Karyawan)
+-----------------------------------------------
+Endpoint : POST /leaves/requests/{id}/cancel
+Auth     : Bearer Token
+Deskripsi: Karyawan membatalkan pengajuan sendiri yang statusnya masih 'pending'.
+           Pengajuan yang sudah diproses (disetujui/ditolak) tidak dapat dibatalkan.
+
+Response 200 OK:
+{
+  "success": true,
+  "message": "Pengajuan berhasil dibatalkan."
+}
+
+Response 422 Unprocessable Content:
+{
+  "message": "Pengajuan ini tidak dapat dibatalkan karena sudah diproses oleh atasan.",
+  "code": "REQUEST_CANNOT_BE_CANCELLED",
+  "errors": null
+}
+
+================================================================================
+BAGIAN 5: WORKSPACE MANAGER (APPROVAL & REVIEW)
+================================================================================
+
+5.1. Antrean Review Presensi Bawahan Langsung
+---------------------------------------------
+Endpoint : GET /manager/attendance-reviews
+Auth     : Bearer Token (Role: Manager)
+Query Params:
+  - date   : string date (YYYY-MM-DD, optional)
+  - search : string (nama karyawan / nip, optional)
+
+Response 200 OK:
+{
+  "success": true,
+  "data": [
+    {
+      "attendance_id": 6,
+      "employee": {
+        "id": "ee86d41e-6886-4357-bb0c-596d5c0f0533",
+        "employee_code": "EMP-005",
+        "full_name": "Sarah Connor"
+      },
+      "attendance_date": "2026-11-05",
+      "check_in_time": "08:55:00",
+      "check_out_time": null,
+      "status": "hadir",
+      "face_score": 94.0,
+      "photo_url": "https://storage.humify.test/attendances/photo_sarah.jpg",
+      "review_status": "pending"
+    }
+  ]
+}
+
+5.2. Keputusan Review Presensi
+------------------------------
+Endpoint : POST /manager/attendance-reviews/{id}/decide
+Auth     : Bearer Token (Role: Manager)
+
+Request Body (JSON):
+{
+  "action": "reject", // enum: "approve" | "reject"
+  "review_note": "Foto tidak terlihat jelas menghadap kamera" // Wajib diisi jika action = "reject"
+}
+
+Response 200 OK:
+{
+  "success": true,
+  "message": "Review presensi berhasil disimpan."
+}
+
+5.3. Antrean Persetujuan Cuti Bawahan Langsung
+----------------------------------------------
+Endpoint : GET /manager/leave-approvals
+Auth     : Bearer Token (Role: Manager)
+Query Params:
+  - status : string (default: "pending")
+
+Response 200 OK:
+{
+  "success": true,
+  "data": [
+    {
+      "request_id": 24,
+      "employee": {
+        "id": "c62cf0cb-d85c-4cc4-b588-3673d11cd9bd",
+        "full_name": "Alex Morgan",
+        "employee_code": "EMP-001"
+      },
+      "leave_type_name": "Annual leave",
+      "start_date": "2026-11-10",
+      "end_date": "2026-11-12",
+      "total_days": 3.0,
+      "reason": "Family vacation in Bali",
+      "attachment_url": null,
+      "status": "pending",
+      "remaining_balance": 8.0
+    }
+  ]
+}
+
+5.4. Keputusan Persetujuan Cuti
+-------------------------------
+Endpoint : POST /manager/leave-approvals/{id}/decide
+Auth     : Bearer Token (Role: Manager)
+
+Request Body (JSON):
+{
+  "action": "reject", // enum: "approve" | "reject"
+  "rejection_reason": "Beban kerja tim sedang tinggi pada minggu tersebut" // Wajib diisi jika action = "reject"
+}
+
+Response 200 OK:
+{
+  "success": true,
+  "message": "Keputusan permohonan berhasil disimpan."
+}
+
+================================================================================
+BAGIAN 6: KODE ERROR SPESIFIK SISTEM (ERROR CODES)
+================================================================================
+
+Ketika server merespons dengan status HTTP error, field `code` pada body respons
+memiliki arti sebagai berikut untuk penanganan UI di Frontend:
+
+- VALIDATION_ERROR            : Input form tidak sesuai aturan validasi Laravel.
+- UNAUTHENTICATED             : Token tidak disertakan atau sesi telah habis (Arahkan ke layar Login).
+- FORBIDDEN                   : Pengguna tidak memiliki wewenang role untuk aksi ini.
+- NOT_FOUND                   : Entitas atau endpoint tidak ditemukan.
+- GEOFENCE_OUT_OF_RANGE       : Koordinat GPS mobile berada di luar batas jarak kantor (radius > 100m).
+- FACE_VERIFICATION_FAILED    : Wajah tidak terdeteksi atau tingkat kemiripan < 80%.
+- INSUFFICIENT_LEAVE_BALANCE  : Sisa kuota cuti tahunan tidak mencukupi permohonan.
+- SHIFT_NOT_ALLOWED           : Karyawan regular memilih shift shifting atau sebaliknya (Trigger DB).
+- REQUEST_CANNOT_BE_CANCELLED : Permohonan tidak bisa dibatalkan karena sudah diproses.
+- TOO_MANY_REQUESTS           : Terlalu banyak percobaan dalam waktu singkat (Rate Limiting).
+================================================================================
+                      DIBUAT UNTUK PENGEMBANGAN HUMIFY HRIS
+================================================================================
+

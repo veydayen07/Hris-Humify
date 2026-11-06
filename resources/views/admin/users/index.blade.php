@@ -42,9 +42,9 @@
                 <label for="role" class="block text-[11px] font-semibold text-slate-600 mb-1">Filter Role</label>
                 <select name="role" id="role" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
                     <option value="">All Roles</option>
-                    <option value="employee" {{ in_array($role, ['employee', 'karyawan']) ? 'selected' : '' }}>Karyawan (Employee)</option>
+                    <option value="employee" {{ in_array($role, ['employee', 'karyawan']) ? 'selected' : '' }}>Employee</option>
                     <option value="manager" {{ $role === 'manager' ? 'selected' : '' }}>Manager</option>
-                    <option value="hr_admin" {{ in_array($role, ['hr_admin', 'admin_hr']) ? 'selected' : '' }}>Admin HR</option>
+                    <option value="hr_admin" {{ in_array($role, ['hr_admin', 'admin_hr']) ? 'selected' : '' }}>HR Admin</option>
                     <option value="super_admin" {{ $role === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
                 </select>
             </div>
@@ -130,7 +130,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-6 py-10 text-center text-xs text-slate-400">
-                                Tidak ada akun yang sesuai kriteria pencarian.
+                                No user accounts match the search criteria.
                             </td>
                         </tr>
                     @endforelse
@@ -164,7 +164,7 @@
                         @endforeach
                     </select>
                     @if ($availableEmployees->isEmpty())
-                        <p class="text-[11px] text-amber-600 mt-1">Semua karyawan saat ini sudah memiliki akun login.</p>
+                        <p class="text-[11px] text-amber-600 mt-1">All current employees already have a user account.</p>
                     @endif
                 </div>
 
@@ -181,9 +181,9 @@
                 <div>
                     <label for="new_role" class="block text-xs font-semibold text-slate-700 mb-1">System Role *</label>
                     <select id="new_role" name="role" required class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
-                        <option value="employee">Karyawan (Employee)</option>
+                        <option value="employee">Employee</option>
                         <option value="manager">Manager</option>
-                        <option value="hr_admin">Admin HR</option>
+                        <option value="hr_admin">HR Admin</option>
                         <option value="super_admin">Super Admin</option>
                     </select>
                 </div>
@@ -215,22 +215,22 @@
                 <div>
                     <label for="edit_role" class="block text-xs font-semibold text-slate-700 mb-1">Assigned Role *</label>
                     <select id="edit_role" name="role" required class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
-                        <option value="employee">Karyawan (Employee)</option>
+                        <option value="employee">Employee</option>
                         <option value="manager">Manager</option>
-                        <option value="hr_admin">Admin HR</option>
+                        <option value="hr_admin">HR Admin</option>
                         <option value="super_admin">Super Admin</option>
                     </select>
                 </div>
 
                 <div>
                     <label for="edit_password" class="block text-xs font-semibold text-slate-700 mb-1">Reset Password (Optional)</label>
-                    <input type="password" id="edit_password" name="new_password" placeholder="Kosongkan jika tidak diubah" class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
+                    <input type="password" id="edit_password" name="new_password" placeholder="Leave blank if unchanged" class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
                 </div>
 
                 <div class="pt-2">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="edit_is_active" name="is_active" value="1" class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300">
-                        <span class="text-xs font-medium text-slate-700">Akun Aktif (Dapat Login)</span>
+                        <span class="text-xs font-medium text-slate-700">Active Account (Can Login)</span>
                     </label>
                 </div>
 

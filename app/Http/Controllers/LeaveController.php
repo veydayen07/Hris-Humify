@@ -98,12 +98,12 @@ class LeaveController extends Controller
 
         if (! $isHr) {
             if ($leaveRequest->employee?->supervisor_id !== $user->employee_id) {
-                abort(403, 'Anda hanya dapat menyetujui pengajuan bawahan langsung.');
+                abort(403, 'You can only approve requests for your direct subordinates.');
             }
         }
 
         if (! in_array($leaveRequest->status?->value ?? (string) $leaveRequest->status, ['pending'], true)) {
-            return back()->with('error', 'Pengajuan ini sudah diproses sebelumnya.');
+            return back()->with('error', 'This request has already been processed.');
         }
 
         $validated = $request->validate([
@@ -112,7 +112,7 @@ class LeaveController extends Controller
         ]);
 
         if ($validated['decision'] === 'rejected' && empty(trim($validated['rejection_reason'] ?? ''))) {
-            return back()->with('error', 'Alasan penolakan wajib disertakan saat menolak permohonan.');
+            return back()->with('error', 'Rejection reason is required when rejecting requests.');
         }
 
         $decision = $validated['decision'];
@@ -144,8 +144,8 @@ class LeaveController extends Controller
             }
         });
 
-        $actionText = $validated['decision'] === 'approved' ? 'disetujui' : 'ditolak';
+        $actionText = $validated['decision'] === 'approved' ? 'approved' : 'rejected';
 
-        return back()->with('success', "Pengajuan cuti/izin {$leaveRequest->employee?->full_name} berhasil {$actionText}.");
+        return back()->with('success', "Leave request for {$leaveRequest->employee?->full_name} has been {$actionText}.");
     }
 }

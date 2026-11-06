@@ -86,8 +86,8 @@
                                 name="gender"
                                 class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600"
                             >
-                                <option value="L" {{ in_array(old('gender', is_object($employee?->gender) ? $employee->gender->value : $employee?->gender), ['L', 'male', 'Laki-laki']) ? 'selected' : '' }}>Male (Laki-laki)</option>
-                                <option value="P" {{ in_array(old('gender', is_object($employee?->gender) ? $employee->gender->value : $employee?->gender), ['P', 'female', 'Perempuan']) ? 'selected' : '' }}>Female (Perempuan)</option>
+                                <option value="L" {{ in_array(old('gender', is_object($employee?->gender) ? $employee->gender->value : $employee?->gender), ['L', 'male', 'Laki-laki']) ? 'selected' : '' }}>Male</option>
+                                <option value="P" {{ in_array(old('gender', is_object($employee?->gender) ? $employee->gender->value : $employee?->gender), ['P', 'female', 'Perempuan']) ? 'selected' : '' }}>Female</option>
                             </select>
                         </div>
                     </div>

@@ -138,7 +138,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-6 py-12 text-center text-xs text-slate-400">
-                                Tidak ada permohonan cuti yang cocok dengan filter yang dipilih.
+                                No leave requests match the selected filter.
                             </td>
                         </tr>
                     @endforelse
@@ -199,13 +199,13 @@
                     @csrf
                     <div>
                         <label for="rejection_reason" class="block text-[11px] font-semibold text-slate-700 mb-1">
-                            Decision Note <span class="text-rose-500 font-normal" id="leaveRejectReasonRequired">(Wajib diisi jika menolak)</span>
+                            Decision Note <span class="text-rose-500 font-normal" id="leaveRejectReasonRequired">(Required when rejecting)</span>
                         </label>
                         <textarea
                             name="rejection_reason"
                             id="rejection_reason"
                             rows="2"
-                            placeholder="Alasan penolakan permohonan (wajib jika ditolak)..."
+                            placeholder="Reason for rejecting the request (required if rejected)..."
                             class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600"
                         ></textarea>
                     </div>
@@ -224,7 +224,7 @@
                             value="rejected"
                             class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition shadow-2xs"
                         >
-                            Tolak (Reject)
+                            Reject
                         </button>
                         <button
                             type="submit"
@@ -232,12 +232,12 @@
                             value="approved"
                             class="px-5 py-2 bg-[#0F766E] hover:bg-teal-800 text-white rounded-lg text-xs font-semibold cursor-pointer transition shadow-2xs"
                         >
-                            Setujui (Approve)
+                            Approve
                         </button>
                     </div>
 
                     <div id="leaveModalReadonlyStatus" class="hidden text-center py-2 text-slate-500 font-medium">
-                        Pengajuan ini sudah diproses dan berstatus: <span id="leaveModalCurrentStatusBadge" class="font-bold"></span>
+                        This request has already been reviewed with status: <span id="leaveModalCurrentStatusBadge" class="font-bold"></span>
                     </div>
                 </form>
             </div>
@@ -252,7 +252,7 @@
             document.getElementById('leaveModalType').textContent = data.type;
             document.getElementById('leaveModalDuration').textContent = data.duration;
             document.getElementById('leaveModalDates').textContent = data.dates;
-            document.getElementById('leaveModalReason').textContent = data.reason || 'Tidak ada keterangan tambahan.';
+            document.getElementById('leaveModalReason').textContent = data.reason || 'No additional remarks provided.';
 
             const attachContainer = document.getElementById('leaveModalAttachmentContainer');
             const attachLink = document.getElementById('leaveModalAttachmentLink');

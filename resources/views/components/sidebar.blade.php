@@ -56,9 +56,7 @@
     <div class="flex flex-col">
         {{-- Logo & Brand --}}
         <div class="px-5 mb-5 flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg bg-[#0F766E] flex items-center justify-center font-bold text-white text-base shadow-xs">
-                H
-            </div>
+            <img src="img/logo.png" alt="" class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-base shadow-xs">
             <div class="flex flex-col">
                 <span class="text-base font-bold text-slate-900 tracking-tight leading-none">Humify</span>
                 <span class="text-[10px] text-teal-700 font-semibold tracking-wide uppercase mt-0.5">HRIS Portal</span>
@@ -101,7 +99,7 @@
     <div class="px-4 pt-4 border-t border-slate-200 flex flex-col gap-3">
         <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
             <p class="text-[11px] text-slate-500 leading-snug">
-                Presensi dan permohonan baru hanya dapat dilakukan melalui <strong>aplikasi mobile Humify</strong>.
+                Attendance check-in and new requests can only be performed via the <strong>Humify mobile app</strong>.
             </p>
         </div>
 
@@ -111,7 +109,7 @@
                 type="submit"
                 class="w-full text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-md transition-colors flex items-center justify-between cursor-pointer"
             >
-                <span>Keluar (Sign out)</span>
+                <span>Sign out</span>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>

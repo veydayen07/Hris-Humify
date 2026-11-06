@@ -79,8 +79,8 @@
                     <div>
                         <label for="gender" class="block text-xs font-semibold text-slate-700 mb-1">Gender *</label>
                         <select name="gender" id="gender" required class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
-                            <option value="L" {{ old('gender') === 'L' || old('gender') === 'male' ? 'selected' : '' }}>Male (Laki-laki)</option>
-                            <option value="P" {{ old('gender') === 'P' || old('gender') === 'female' ? 'selected' : '' }}>Female (Perempuan)</option>
+                            <option value="L" {{ old('gender') === 'L' || old('gender') === 'male' ? 'selected' : '' }}>Male</option>
+                            <option value="P" {{ old('gender') === 'P' || old('gender') === 'female' ? 'selected' : '' }}>Female</option>
                         </select>
                     </div>
 
@@ -161,18 +161,18 @@
                     <div>
                         <label for="employment_type" class="block text-xs font-semibold text-slate-700 mb-1">Employment Type *</label>
                         <select name="employment_type" id="employment_type" required class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
-                            <option value="permanent" {{ old('employment_type') === 'permanent' ? 'selected' : '' }}>Permanent (Tetap)</option>
-                            <option value="contract" {{ old('employment_type') === 'contract' ? 'selected' : '' }}>Contract (Kontrak)</option>
-                            <option value="internship" {{ old('employment_type') === 'internship' ? 'selected' : '' }}>Internship (Magang)</option>
-                            <option value="daily" {{ old('employment_type') === 'daily' ? 'selected' : '' }}>Daily (Harian)</option>
+                            <option value="permanent" {{ old('employment_type') === 'permanent' ? 'selected' : '' }}>Permanent</option>
+                            <option value="contract" {{ old('employment_type') === 'contract' ? 'selected' : '' }}>Contract</option>
+                            <option value="internship" {{ old('employment_type') === 'internship' ? 'selected' : '' }}>Internship</option>
+                            <option value="daily" {{ old('employment_type') === 'daily' ? 'selected' : '' }}>Daily</option>
                         </select>
                     </div>
 
                     <div>
                         <label for="employee_status" class="block text-xs font-semibold text-slate-700 mb-1">Status *</label>
                         <select name="employee_status" id="employee_status" required class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
-                            <option value="active" {{ old('employee_status') === 'active' ? 'selected' : '' }}>Active (Aktif)</option>
-                            <option value="inactive" {{ old('employee_status') === 'inactive' ? 'selected' : '' }}>Inactive (Nonaktif)</option>
+                            <option value="active" {{ old('employee_status') === 'active' ? 'selected' : '' }}>Active</option>
+                            <option value="inactive" {{ old('employee_status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                         </select>
                     </div>
 
@@ -192,7 +192,7 @@
                 <div class="mt-4 pt-3">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="is_shift_worker" value="1" {{ old('is_shift_worker') ? 'checked' : '' }} class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300">
-                        <span class="text-xs font-medium text-slate-700">Kategori Pekerja Shifting (Bukan Regular)</span>
+                        <span class="text-xs font-medium text-slate-700">Shifting Work Category (Non-regular)</span>
                     </label>
                 </div>
             </div>

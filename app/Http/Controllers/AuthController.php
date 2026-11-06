@@ -39,7 +39,7 @@ class AuthController extends Controller
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
-                return back()->withErrors(['username' => 'Akun Anda dinonaktifkan. Hubungi admin HR.'])->onlyInput('username');
+                return back()->withErrors(['username' => 'Your account is deactivated. Please contact HR admin.'])->onlyInput('username');
             }
 
             $user->update(['last_login_at' => now()]);
@@ -48,7 +48,7 @@ class AuthController extends Controller
         }
 
         return back()->withErrors([
-            'username' => 'Username atau password yang dimasukkan salah.',
+            'username' => 'The provided credentials do not match our records.',
         ])->onlyInput('username');
     }
 
@@ -58,7 +58,7 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login')->with('success', 'Anda telah berhasil keluar.');
+        return redirect()->route('login')->with('success', 'You have successfully signed out.');
     }
 
     /**
@@ -74,6 +74,6 @@ class AuthController extends Controller
         Auth::login($user);
         request()->session()->regenerate();
 
-        return redirect()->route('dashboard')->with('success', "Beralih role ke: {$user->getRoleLabelAttribute()} ({$user->username})");
+        return redirect()->route('dashboard')->with('success', "Switched role to: {$user->getRoleLabelAttribute()} ({$user->username})");
     }
 }

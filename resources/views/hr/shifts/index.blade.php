@@ -85,7 +85,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-6 py-10 text-center text-xs text-slate-400">
-                                Belum ada konfigurasi jam shift kerja.
+                                No work shift configurations found.
                             </td>
                         </tr>
                     @endforelse
@@ -131,12 +131,12 @@
                 <div class="space-y-2 pt-2">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="is_overnight" value="1" class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300">
-                        <span class="text-xs text-slate-700">Overnight (Lintas tengah malam)</span>
+                        <span class="text-xs text-slate-700">Overnight (Spans midnight)</span>
                     </label>
 
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="is_active" value="1" checked class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300">
-                        <span class="text-xs text-slate-700">Status Aktif</span>
+                        <span class="text-xs text-slate-700">Active Status</span>
                     </label>
                 </div>
 
@@ -186,12 +186,12 @@
                 <div class="space-y-2 pt-2">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="edit_is_overnight" name="is_overnight" value="1" class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300">
-                        <span class="text-xs text-slate-700">Overnight (Lintas tengah malam)</span>
+                        <span class="text-xs text-slate-700">Overnight (Spans midnight)</span>
                     </label>
 
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="edit_is_active" name="is_active" value="1" class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300">
-                        <span class="text-xs text-slate-700">Status Aktif</span>
+                        <span class="text-xs text-slate-700">Active Status</span>
                     </label>
                 </div>
 

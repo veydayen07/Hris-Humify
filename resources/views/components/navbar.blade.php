@@ -21,27 +21,27 @@
     </nav>
 
     <div class="flex items-center gap-4">
-        {{-- Demo Switcher (Discreet for testing) --}}
+        {{-- Demo Switcher (Discreet for testing - loaded dynamically from database) --}}
         @if (app()->environment(['local', 'testing']))
+            @php
+                $demoAccounts = \App\Models\User::with(['employee'])->where('is_active', true)->orderBy('username')->get();
+            @endphp
             <div class="relative group">
                 <button type="button" class="px-2 py-1 text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 rounded border border-slate-200 flex items-center gap-1 cursor-pointer">
-                    <span>Ganti Role Demo</span>
+                    <span>Switch Demo Role</span>
                     <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                 </button>
-                <div class="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg py-1.5 hidden group-hover:block z-50 text-xs">
-                    <p class="px-3 py-1 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100">Pilih Role Akun:</p>
-                    <a href="{{ route('dev.switch', 'alex.morgan') }}" class="block px-3 py-1.5 hover:bg-teal-50 hover:text-teal-700 {{ $currentUser?->username === 'alex.morgan' ? 'font-bold text-teal-700' : 'text-slate-700' }}">
-                        Alex Morgan &middot; <span class="text-slate-400">Karyawan</span>
-                    </a>
-                    <a href="{{ route('dev.switch', 'maya.chen') }}" class="block px-3 py-1.5 hover:bg-teal-50 hover:text-teal-700 {{ $currentUser?->username === 'maya.chen' ? 'font-bold text-teal-700' : 'text-slate-700' }}">
-                        Maya Chen &middot; <span class="text-slate-400">Manager</span>
-                    </a>
-                    <a href="{{ route('dev.switch', 'sofia.patel') }}" class="block px-3 py-1.5 hover:bg-teal-50 hover:text-teal-700 {{ $currentUser?->username === 'sofia.patel' ? 'font-bold text-teal-700' : 'text-slate-700' }}">
-                        Sofia Patel &middot; <span class="text-slate-400">Admin HR</span>
-                    </a>
-                    <a href="{{ route('dev.switch', 'daniel.brooks') }}" class="block px-3 py-1.5 hover:bg-teal-50 hover:text-teal-700 {{ $currentUser?->username === 'daniel.brooks' ? 'font-bold text-teal-700' : 'text-slate-700' }}">
-                        Daniel Brooks &middot; <span class="text-slate-400">Super Admin</span>
-                    </a>
+                <div class="absolute right-0 mt-1 w-52 bg-white border border-slate-200 rounded-lg shadow-lg py-1.5 hidden group-hover:block z-50 text-xs max-h-72 overflow-y-auto">
+                    <p class="px-3 py-1 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100">Select Account Role:</p>
+                    @foreach ($demoAccounts as $account)
+                        @php
+                            $accountName = $account->employee?->full_name ?? $account->username;
+                            $isSelected = $currentUser?->username === $account->username;
+                        @endphp
+                        <a href="{{ route('dev.switch', $account->username) }}" class="block px-3 py-1.5 hover:bg-teal-50 hover:text-teal-700 {{ $isSelected ? 'font-bold text-teal-700 bg-teal-50/50' : 'text-slate-700' }}">
+                            {{ $accountName }} &middot; <span class="text-slate-400">{{ $account->role_label }}</span>
+                        </a>
+                    @endforeach
                 </div>
             </div>
         @endif

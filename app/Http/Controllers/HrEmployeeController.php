@@ -143,7 +143,7 @@ class HrEmployeeController extends Controller
             'address' => $validated['address'] ?? null,
         ]);
 
-        return redirect()->route('hr.employees.show', $employee->id)->with('success', "Karyawan {$employee->full_name} berhasil ditambahkan.");
+        return redirect()->route('hr.employees.show', $employee->id)->with('success', "Employee {$employee->full_name} added successfully.");
     }
 
     /**
@@ -181,7 +181,7 @@ class HrEmployeeController extends Controller
             'phone' => $validated['phone'] ?? $employee->phone,
         ]);
 
-        return redirect()->route('hr.employees.show', ['id' => $employee->id, 'tab' => 'job'])->with('success', 'Informasi pekerjaan karyawan berhasil diperbarui.');
+        return redirect()->route('hr.employees.show', ['id' => $employee->id, 'tab' => 'job'])->with('success', 'Employee job information updated successfully.');
     }
 
     /**
@@ -205,7 +205,7 @@ class HrEmployeeController extends Controller
         } elseif ($request->filled('photo_url')) {
             $photoPath = $request->input('photo_url');
         } else {
-            return back()->with('error', 'Pilih file foto wajah acuan terlebih dahulu.');
+            return back()->with('error', 'Please select a reference face photo file first.');
         }
 
         $employee->update([
@@ -213,6 +213,6 @@ class HrEmployeeController extends Controller
             'face_registered_at' => now(),
         ]);
 
-        return redirect()->route('hr.employees.show', ['id' => $employee->id, 'tab' => 'face'])->with('success', "Foto acuan wajah {$employee->full_name} berhasil diperbarui.");
+        return redirect()->route('hr.employees.show', ['id' => $employee->id, 'tab' => 'face'])->with('success', "Face reference photo for {$employee->full_name} updated successfully.");
     }
 }

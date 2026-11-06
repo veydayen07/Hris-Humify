@@ -124,7 +124,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-6 py-12 text-center text-xs text-slate-400">
-                                Tidak ada data karyawan yang cocok dengan kriteria pencarian.
+                                No employee records match the search criteria.
                             </td>
                         </tr>
                     @endforelse

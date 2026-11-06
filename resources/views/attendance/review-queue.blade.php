@@ -141,7 +141,7 @@
                                         'face_verified' => (bool) $att->check_in_face_verified,
                                         'face_score' => $att->check_in_face_score ?? '95.5',
                                         'geofence' => (bool) $att->check_in_geofence_valid,
-                                        'notes' => $att->notes ?? 'Presensi mobile regular',
+                                        'notes' => $att->notes ?? 'Regular mobile attendance',
                                         'review_status' => $reviewVal,
                                         'review_note' => $att->review_note,
                                         'is_pending' => $isPending,
@@ -156,7 +156,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-6 py-12 text-center text-xs text-slate-400">
-                                Tidak ada catatan presensi yang cocok dengan filter.
+                                No attendance records match the filter.
                             </td>
                         </tr>
                     @endforelse
@@ -187,7 +187,7 @@
                 <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
                     <div class="w-20 h-20 bg-slate-200 rounded-lg overflow-hidden shrink-0 border border-slate-300 flex items-center justify-center text-slate-400">
                         <img id="modalPhoto" src="" alt="Check-in Photo" class="w-full h-full object-cover hidden">
-                        <span id="modalNoPhoto" class="text-[10px] text-center px-1">Foto Presensi Mobile</span>
+                        <span id="modalNoPhoto" class="text-[10px] text-center px-1">Mobile Attendance Photo</span>
                     </div>
 
                     <div class="space-y-1.5 flex-1">
@@ -248,7 +248,7 @@
                             value="rejected"
                             class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition shadow-2xs"
                         >
-                            Tolak (Reject)
+                            Reject
                         </button>
                         <button
                             type="submit"
@@ -256,12 +256,12 @@
                             value="approved"
                             class="px-5 py-2 bg-[#0F766E] hover:bg-teal-800 text-white rounded-lg text-xs font-semibold cursor-pointer transition shadow-2xs"
                         >
-                            Setujui (Approve)
+                            Approve
                         </button>
                     </div>
 
                     <div id="modalReadonlyStatus" class="hidden text-center py-2 text-slate-500 font-medium">
-                        Presensi ini sudah diproses dan berstatus: <span id="modalCurrentStatusBadge" class="font-bold"></span>
+                        This attendance record has been reviewed with status: <span id="modalCurrentStatusBadge" class="font-bold"></span>
                     </div>
                 </form>
             </div>

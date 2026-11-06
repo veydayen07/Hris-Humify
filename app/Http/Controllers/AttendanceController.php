@@ -122,12 +122,12 @@ class AttendanceController extends Controller
         // Authorization check: if not HR, must be direct manager
         if (! $isHr) {
             if ($attendance->employee?->supervisor_id !== $user->employee_id) {
-                abort(403, 'Anda hanya dapat meninjau presensi bawahan langsung.');
+                abort(403, 'You can only review attendance for your direct subordinates.');
             }
         }
 
         if (! in_array($attendance->review_status?->value ?? (string) $attendance->review_status, ['pending'], true)) {
-            return back()->with('error', 'Presensi ini sudah ditinjau sebelumnya.');
+            return back()->with('error', 'This attendance record has already been reviewed.');
         }
 
         $validated = $request->validate([
@@ -136,7 +136,7 @@ class AttendanceController extends Controller
         ]);
 
         if ($validated['decision'] === 'rejected' && empty(trim($validated['review_note'] ?? ''))) {
-            return back()->with('error', 'Alasan penolakan wajib diisi saat menolak presensi.');
+            return back()->with('error', 'Rejection reason is required when rejecting attendance.');
         }
 
         $decision = $validated['decision'];
@@ -153,9 +153,9 @@ class AttendanceController extends Controller
             'review_note' => $validated['review_note'] ?? null,
         ]);
 
-        $actionText = $validated['decision'] === 'approved' ? 'disetujui' : 'ditolak';
+        $actionText = $validated['decision'] === 'approved' ? 'approved' : 'rejected';
 
-        return back()->with('success', "Presensi {$attendance->employee?->full_name} berhasil {$actionText}.");
+        return back()->with('success', "Attendance for {$attendance->employee?->full_name} has been {$actionText}.");
     }
 
     /**

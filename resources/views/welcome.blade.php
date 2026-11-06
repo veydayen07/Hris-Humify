@@ -149,27 +149,25 @@
                         Need access or help signing in? Contact your corporate HR administrator.
                     </p>
 
-                    <!-- Quick Demo Credentials helper -->
-                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600">
-                        <p class="font-semibold text-slate-800 mb-1.5 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-teal-500 inline-block"></span>
-                            Demo Accounts (Password: <code class="text-teal-700 bg-white px-1 py-0.5 rounded border border-slate-200">password123</code>):
-                        </p>
-                        <div class="grid grid-cols-2 gap-1.5 text-[11px] mt-2">
-                            <a href="{{ route('dev.switch', 'alex.morgan') }}" class="p-1.5 bg-white border border-slate-200 rounded hover:border-teal-500 hover:text-teal-700 block truncate">
-                                <strong>alex.morgan</strong> (Employee)
-                            </a>
-                            <a href="{{ route('dev.switch', 'maya.chen') }}" class="p-1.5 bg-white border border-slate-200 rounded hover:border-teal-500 hover:text-teal-700 block truncate">
-                                <strong>maya.chen</strong> (Manager)
-                            </a>
-                            <a href="{{ route('dev.switch', 'sofia.patel') }}" class="p-1.5 bg-white border border-slate-200 rounded hover:border-teal-500 hover:text-teal-700 block truncate">
-                                <strong>sofia.patel</strong> (Admin HR)
-                            </a>
-                            <a href="{{ route('dev.switch', 'daniel.brooks') }}" class="p-1.5 bg-white border border-slate-200 rounded hover:border-teal-500 hover:text-teal-700 block truncate">
-                                <strong>daniel.brooks</strong> (Super Admin)
-                            </a>
+                    <!-- Quick Demo Credentials helper (Loaded dynamically from database) -->
+                    @php
+                        $demoAccounts = \App\Models\User::with('employee')->where('is_active', true)->orderBy('username')->get();
+                    @endphp
+                    @if ($demoAccounts->isNotEmpty())
+                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600">
+                            <p class="font-semibold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-teal-500 inline-block"></span>
+                                Demo Accounts (Password: <code class="text-teal-700 bg-white px-1 py-0.5 rounded border border-slate-200">password123</code>):
+                            </p>
+                            <div class="grid grid-cols-2 gap-1.5 text-[11px] mt-2 max-h-40 overflow-y-auto">
+                                @foreach ($demoAccounts as $account)
+                                    <a href="{{ route('dev.switch', $account->username) }}" class="p-1.5 bg-white border border-slate-200 rounded hover:border-teal-500 hover:text-teal-700 block truncate" title="{{ $account->employee?->full_name }}">
+                                        <strong>{{ $account->username }}</strong> ({{ $account->role_label }})
+                                    </a>
+                                @endforeach
+                            </div>
                         </div>
-                    </div>
+                    @endif
                 </div>
             </div>
         </section>

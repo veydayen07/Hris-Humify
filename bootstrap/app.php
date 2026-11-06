@@ -37,7 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*') || $request->expectsJson()) {
                 if (($e->errorInfo[0] ?? null) === '45000') {
                     return response()->json([
-                        'message' => $e->errorInfo[2] ?? 'Shift tidak sesuai kategori karyawan',
+                        'message' => $e->errorInfo[2] ?? 'Shift is not allowed for employee category.',
                         'code' => 'SHIFT_NOT_ALLOWED',
                         'errors' => null,
                     ], 422);
@@ -60,20 +60,20 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Belum login atau token tidak valid.',
+                    'message' => 'Unauthenticated or invalid token.',
                     'code' => 'UNAUTHENTICATED',
                     'errors' => null,
                 ], 401);
             }
 
-            return redirect()->guest(route('login'))->with('error', 'Silakan login terlebih dahulu.');
+            return redirect()->guest(route('login'))->with('error', 'Please log in first.');
         });
 
         // Authorization Exception
         $exceptions->render(function (AuthorizationException|AccessDeniedHttpException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Role tidak berhak.',
+                    'message' => 'Unauthorized role access.',
                     'code' => 'FORBIDDEN',
                     'errors' => null,
                 ], 403);
@@ -84,7 +84,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (NotFoundHttpException|ModelNotFoundException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Data tidak ditemukan atau di luar cakupan.',
+                    'message' => 'Record not found or outside authorized scope.',
                     'code' => 'NOT_FOUND',
                     'errors' => null,
                 ], 404);
@@ -95,7 +95,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Batas percobaan terlampaui.',
+                    'message' => 'Rate limit exceeded. Please try again later.',
                     'code' => 'TOO_MANY_REQUESTS',
                     'errors' => null,
                 ], 429);
