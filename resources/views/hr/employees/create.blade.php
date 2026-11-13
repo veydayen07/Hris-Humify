@@ -161,18 +161,18 @@
                     <div>
                         <label for="employment_type" class="block text-xs font-semibold text-slate-700 mb-1">Employment Type *</label>
                         <select name="employment_type" id="employment_type" required class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
-                            <option value="permanent" {{ old('employment_type') === 'permanent' ? 'selected' : '' }}>Permanent</option>
-                            <option value="contract" {{ old('employment_type') === 'contract' ? 'selected' : '' }}>Contract</option>
-                            <option value="internship" {{ old('employment_type') === 'internship' ? 'selected' : '' }}>Internship</option>
-                            <option value="daily" {{ old('employment_type') === 'daily' ? 'selected' : '' }}>Daily</option>
+                            <option value="tetap" {{ old('employment_type') === 'tetap' ? 'selected' : '' }}>Permanent</option>
+                            <option value="kontrak" {{ old('employment_type') === 'kontrak' ? 'selected' : '' }}>Contract</option>
+                            <option value="magang" {{ old('employment_type') === 'magang' ? 'selected' : '' }}>Internship</option>
+                            <option value="harian" {{ old('employment_type') === 'harian' ? 'selected' : '' }}>Daily</option>
                         </select>
                     </div>
 
                     <div>
                         <label for="employee_status" class="block text-xs font-semibold text-slate-700 mb-1">Status *</label>
                         <select name="employee_status" id="employee_status" required class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
-                            <option value="active" {{ old('employee_status') === 'active' ? 'selected' : '' }}>Active</option>
-                            <option value="inactive" {{ old('employee_status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                            <option value="aktif" {{ old('employee_status') === 'aktif' ? 'selected' : '' }}>Active</option>
+                            <option value="nonaktif" {{ old('employee_status') === 'nonaktif' ? 'selected' : '' }}>Inactive</option>
                         </select>
                     </div>
 

@@ -28,6 +28,7 @@
             ['label' => 'Shift Settings', 'route' => 'hr.shifts', 'icon' => 'clock'],
             ['label' => 'Leave Settings', 'route' => 'hr.leave-settings', 'icon' => 'adjustments'],
             ['label' => 'Monthly Report', 'route' => 'hr.reports', 'icon' => 'chart-bar'],
+            ['label' => 'Accounts & Roles', 'route' => 'admin.users', 'icon' => 'shield'],
             ['label' => 'My Profile', 'route' => 'profile', 'icon' => 'user'],
         ];
     } elseif ($currentUser?->isManager()) {

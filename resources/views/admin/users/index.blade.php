@@ -112,19 +112,35 @@
                                 {{ $usr->last_login_at ? \Carbon\Carbon::parse($usr->last_login_at)->translatedFormat('d M Y, H:i') : 'Never' }}
                             </td>
                             <td class="px-6 py-3.5 text-right">
-                                <button
-                                    type="button"
-                                    onclick="openEditUserModal({{ json_encode([
-                                        'id' => $usr->id,
-                                        'username' => $usr->username,
-                                        'role' => $roleVal,
-                                        'is_active' => (bool) $usr->is_active,
-                                        'update_url' => route('admin.users.update', $usr->id),
-                                    ]) }})"
-                                    class="px-2.5 py-1 bg-slate-100 hover:bg-teal-50 hover:text-teal-700 rounded text-xs font-semibold cursor-pointer"
-                                >
-                                    Edit Role
-                                </button>
+                                <div class="inline-flex items-center gap-1.5 justify-end">
+                                    <button
+                                        type="button"
+                                        onclick="openEditUserModal({{ json_encode([
+                                            'id' => $usr->id,
+                                            'username' => $usr->username,
+                                            'employee_name' => $usr->employee?->full_name ?? 'System User',
+                                            'role' => $roleVal,
+                                            'is_active' => (bool) $usr->is_active,
+                                            'update_url' => route('admin.users.update', $usr->id),
+                                        ]) }})"
+                                        class="px-2.5 py-1 bg-slate-100 hover:bg-teal-50 hover:text-teal-700 text-slate-700 rounded text-xs font-semibold cursor-pointer transition"
+                                    >
+                                        Edit
+                                    </button>
+
+                                    @if ($usr->id !== auth()->id())
+                                        <form method="POST" action="{{ route('admin.users.destroy', $usr->id) }}" onsubmit="return confirm('Are you sure you want to delete user account \'{{ $usr->username }}\'? This will revoke login access for this employee.');" class="inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button
+                                                type="submit"
+                                                class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded text-xs font-semibold cursor-pointer transition"
+                                            >
+                                                Delete
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -208,8 +224,13 @@
                 @csrf
                 @method('PUT')
                 <div>
-                    <span class="text-slate-400 block text-[11px]">Username</span>
-                    <span id="edit_username_display" class="font-bold text-slate-900 text-sm font-mono">-</span>
+                    <span class="text-slate-400 block text-[11px]">Linked Employee</span>
+                    <span id="edit_employee_display" class="font-semibold text-slate-800 text-xs">-</span>
+                </div>
+
+                <div>
+                    <label for="edit_username" class="block text-xs font-semibold text-slate-700 mb-1">Username *</label>
+                    <input type="text" id="edit_username" name="username" required class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600">
                 </div>
 
                 <div>
@@ -246,7 +267,8 @@
     <script>
         function openEditUserModal(data) {
             document.getElementById('editUserForm').action = data.update_url;
-            document.getElementById('edit_username_display').textContent = data.username;
+            document.getElementById('edit_employee_display').textContent = data.employee_name || '-';
+            document.getElementById('edit_username').value = data.username;
 
             let roleVal = data.role;
             if (roleVal === 'karyawan') roleVal = 'employee';

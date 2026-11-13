@@ -72,12 +72,16 @@ Route::middleware('auth')->group(function () {
 
         // Reports
         Route::get('/reports', [HrSettingsController::class, 'reports'])->name('reports');
+
+        // Alias for HR users management
+        Route::get('/users', fn () => redirect()->route('admin.users'))->name('users');
     });
 
-    // Super Admin only routes
-    Route::middleware('role:super_admin')->prefix('admin')->name('admin.')->group(function () {
+    // User & Account Management routes (Accessible by HR Admin and Super Admin)
+    Route::middleware('role:admin_hr,super_admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [SuperAdminController::class, 'users'])->name('users');
         Route::post('/users', [SuperAdminController::class, 'storeUser'])->name('users.store');
         Route::put('/users/{id}', [SuperAdminController::class, 'updateUser'])->name('users.update');
+        Route::delete('/users/{id}', [SuperAdminController::class, 'destroyUser'])->name('users.destroy');
     });
 });

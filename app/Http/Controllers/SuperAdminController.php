@@ -76,7 +76,7 @@ class SuperAdminController extends Controller
             'is_active' => true,
         ]);
 
-        return redirect()->route('admin.users')->with('success', "Akun untuk {$validated['username']} berhasil dibuat.");
+        return redirect()->route('admin.users')->with('success', "Account for {$validated['username']} created successfully.");
     }
 
     public function updateUser(Request $request, string $id): RedirectResponse
@@ -86,6 +86,7 @@ class SuperAdminController extends Controller
         $user = User::findOrFail($id);
 
         $validated = $request->validate([
+            'username' => ['nullable', 'string', 'min:3', 'max:50', 'unique:users,username,'.$user->id],
             'role' => ['required', 'in:employee,karyawan,manager,hr_admin,admin_hr,super_admin'],
             'is_active' => ['boolean'],
             'new_password' => ['nullable', 'string', 'min:6'],
@@ -94,17 +95,29 @@ class SuperAdminController extends Controller
         // Guard: prevent user from demoting or disabling self
         if ($user->id === $currentUser->id) {
             if (! $request->boolean('is_active')) {
-                return back()->with('error', 'Anda tidak dapat menonaktifkan akun Anda sendiri.');
+                return back()->with('error', 'You cannot deactivate your own account.');
             }
-            if ($validated['role'] !== 'super_admin') {
-                return back()->with('error', 'Anda tidak dapat menghapus role Super Admin dari akun Anda sendiri.');
+            if ($currentUser->isSuperAdmin() && $validated['role'] !== 'super_admin') {
+                return back()->with('error', 'You cannot remove the Super Admin role from your own account.');
             }
         }
 
+        $role = $validated['role'];
+        if ($role === 'employee') {
+            $role = 'karyawan';
+        }
+        if ($role === 'hr_admin') {
+            $role = 'admin_hr';
+        }
+
         $data = [
-            'role' => $validated['role'],
+            'role' => $role,
             'is_active' => $request->boolean('is_active'),
         ];
+
+        if (! empty($validated['username'])) {
+            $data['username'] = $validated['username'];
+        }
 
         if (! empty($validated['new_password'])) {
             $hashed = Hash::make($validated['new_password']);
@@ -114,6 +127,23 @@ class SuperAdminController extends Controller
 
         $user->update($data);
 
-        return redirect()->route('admin.users')->with('success', "Akun {$user->username} berhasil diperbarui.");
+        return redirect()->route('admin.users')->with('success', "Account {$user->username} updated successfully.");
+    }
+
+    public function destroyUser(string $id): RedirectResponse
+    {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+        $user = User::findOrFail($id);
+
+        // Guard: prevent self-deletion
+        if ($user->id === $currentUser->id) {
+            return back()->with('error', 'You cannot delete your own account.');
+        }
+
+        $username = $user->username;
+        $user->delete();
+
+        return redirect()->route('admin.users')->with('success', "Account {$username} has been successfully deleted.");
     }
 }
