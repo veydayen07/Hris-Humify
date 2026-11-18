@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\v1\AttendanceController;
 use App\Http\Controllers\Api\v1\AuthController;
 use App\Http\Controllers\Api\v1\LeaveController;
 use App\Http\Controllers\Api\v1\ManagerController;
+use App\Http\Controllers\Api\v1\OfficeLocationController;
 use App\Http\Controllers\Api\v1\ProfileController;
 use App\Http\Middleware\ApiTokenAuth;
 use Illuminate\Support\Facades\Route;
@@ -31,6 +32,13 @@ Route::middleware([ApiTokenAuth::class])->group(function () {
     Route::get('/leaves/requests', [LeaveController::class, 'requests']);
     Route::post('/leaves/requests', [LeaveController::class, 'submit']);
     Route::post('/leaves/requests/{id}/cancel', [LeaveController::class, 'cancel']);
+
+    // Office Location Settings
+    Route::get('/office-location', [OfficeLocationController::class, 'show']);
+    Route::middleware([ApiTokenAuth::class . ':admin_hr'])->group(function () {
+        Route::post('/office-location', [OfficeLocationController::class, 'update']);
+        Route::put('/office-location', [OfficeLocationController::class, 'update']);
+    });
 
     // Manager Workspace (Manager & HR)
     Route::middleware([ApiTokenAuth::class . ':manager'])->prefix('manager')->group(function () {

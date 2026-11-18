@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\v1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
+use App\Models\Department;
+use App\Models\Employee;
 use App\Models\WorkShift;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -33,6 +35,7 @@ class AttendanceController extends Controller
 
         $today = Carbon::now('Asia/Jakarta')->format('Y-m-d');
 
+        /** @var Attendance|null $attendance */
         $attendance = Attendance::with('workShift')
             ->where('employee_id', $employee->id)
             ->whereDate('attendance_date', $today)
@@ -117,11 +120,12 @@ class AttendanceController extends Controller
         $lat = (float) $request->input('latitude');
         $lng = (float) $request->input('longitude');
 
-        // Geofence check
-        $distance = $this->calculateHaversineDistance($lat, $lng, self::OFFICE_LAT, self::OFFICE_LNG);
-        if ($distance > self::MAX_DISTANCE_METERS) {
+        // Geofence check from database
+        $office = $this->getOfficeLocation($employee);
+        $distance = $this->calculateHaversineDistance($lat, $lng, $office['latitude'], $office['longitude']);
+        if ($distance > $office['radius']) {
             return response()->json([
-                'message' => 'Anda berada di luar area kantor yang diizinkan (Radius maksimal 100m).',
+                'message' => "Anda berada di luar area kantor yang diizinkan (Radius maksimal {$office['radius']}m).",
                 'code' => 'GEOFENCE_OUT_OF_RANGE',
                 'errors' => [
                     'location' => ["Jarak Anda saat ini {$distance} meter dari kantor."],
@@ -168,6 +172,7 @@ class AttendanceController extends Controller
         $today = $now->format('Y-m-d');
 
         // Check if attendance already exists
+        /** @var Attendance|null $attendance */
         $attendance = Attendance::where('employee_id', $employee->id)
             ->whereDate('attendance_date', $today)
             ->first();
@@ -210,7 +215,7 @@ class AttendanceController extends Controller
         if (! $attendance) {
             $attendance = new Attendance();
             $attendance->employee_id = $employee->id;
-            $attendance->attendance_date = $today;
+            $attendance->attendance_date = Carbon::parse($today);
         }
 
         $attendance->shift_id = $shift?->id;
@@ -273,11 +278,12 @@ class AttendanceController extends Controller
         $lat = (float) $request->input('latitude');
         $lng = (float) $request->input('longitude');
 
-        // Geofence check
-        $distance = $this->calculateHaversineDistance($lat, $lng, self::OFFICE_LAT, self::OFFICE_LNG);
-        if ($distance > self::MAX_DISTANCE_METERS) {
+        // Geofence check from database
+        $office = $this->getOfficeLocation($employee);
+        $distance = $this->calculateHaversineDistance($lat, $lng, $office['latitude'], $office['longitude']);
+        if ($distance > $office['radius']) {
             return response()->json([
-                'message' => 'Anda berada di luar area kantor yang diizinkan (Radius maksimal 100m).',
+                'message' => "Anda berada di luar area kantor yang diizinkan (Radius maksimal {$office['radius']}m).",
                 'code' => 'GEOFENCE_OUT_OF_RANGE',
                 'errors' => [
                     'location' => ["Jarak Anda saat ini {$distance} meter dari kantor."],
@@ -288,6 +294,7 @@ class AttendanceController extends Controller
         $now = Carbon::now('Asia/Jakarta');
         $today = $now->format('Y-m-d');
 
+        /** @var Attendance|null $attendance */
         $attendance = Attendance::with('workShift')
             ->where('employee_id', $employee->id)
             ->whereDate('attendance_date', $today)
@@ -420,6 +427,30 @@ class AttendanceController extends Controller
                 'history' => $historyList,
             ],
         ]);
+    }
+
+    /**
+     * Helper: Get dynamic office location from department database
+     *
+     * @param  Employee|null  $employee
+     * @return array{latitude: float, longitude: float, radius: float}
+     */
+    private function getOfficeLocation(?Employee $employee = null): array
+    {
+        $dept = $employee?->department
+            ?: Department::whereNotNull('description')->where('description', '!=', '')->first()
+            ?: Department::first();
+
+        $config = null;
+        if ($dept && ! empty($dept->description)) {
+            $config = json_decode($dept->description, true);
+        }
+
+        return [
+            'latitude' => isset($config['latitude']) ? (float) $config['latitude'] : self::OFFICE_LAT,
+            'longitude' => isset($config['longitude']) ? (float) $config['longitude'] : self::OFFICE_LNG,
+            'radius' => isset($config['radius_meters']) ? (float) $config['radius_meters'] : self::MAX_DISTANCE_METERS,
+        ];
     }
 
     /**
