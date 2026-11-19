@@ -204,17 +204,12 @@ class AttendanceController extends Controller
 
             if (! $shift->is_overnight) {
                 // Daytime shift (e.g. Regular 08:00 - 17:00)
+                // Ontime if check-in is before or at shift start (including early morning / dini hari / sahur)
                 if ($now->greaterThan($shiftStart)) {
                     $lateMinutes = (int) $shiftStart->diffInMinutes($now);
                     if ($lateMinutes > 0) {
                         $status = 'terlambat';
                     }
-                } elseif ($now->hour < 6) {
-                    // Check-in between 00:00 and 05:59:
-                    // Middle of the night, way past the 08:00 shift start of the work cycle.
-                    $prevShiftStart = $shiftStart->copy()->subDay();
-                    $lateMinutes = (int) $prevShiftStart->diffInMinutes($now);
-                    $status = 'terlambat';
                 }
             } else {
                 // Overnight shift (e.g. 22:00 - 06:00)
