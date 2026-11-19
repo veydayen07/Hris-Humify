@@ -19,6 +19,7 @@ Route::middleware([ApiTokenAuth::class])->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::put('/profile', [ProfileController::class, 'update']);
+    Route::post('/profile/face-reference', [ProfileController::class, 'registerFace']);
 
     // Attendance
     Route::get('/attendances/today', [AttendanceController::class, 'today']);
