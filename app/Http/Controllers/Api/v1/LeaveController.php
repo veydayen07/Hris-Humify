@@ -91,7 +91,11 @@ class LeaveController extends Controller
             ->where('employee_id', $employee->id);
 
         if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
+            $st = $request->input('status');
+            if ($st === 'approved') $st = 'disetujui';
+            if ($st === 'rejected') $st = 'ditolak';
+            if ($st === 'cancelled') $st = 'dibatalkan';
+            $query->where('status', $st);
         }
 
         if ($request->filled('year')) {
@@ -103,6 +107,11 @@ class LeaveController extends Controller
         $data = $requests->map(function ($r) {
             $statusStr = is_object($r->status) ? $r->status->value : (string) $r->status;
 
+            $attachmentUrl = $r->attachment_url;
+            if ($attachmentUrl && ! str_starts_with($attachmentUrl, 'http://') && ! str_starts_with($attachmentUrl, 'https://')) {
+                $attachmentUrl = url($attachmentUrl);
+            }
+
             return [
                 'id' => (int) $r->id,
                 'leave_type' => [
@@ -113,7 +122,7 @@ class LeaveController extends Controller
                 'end_date' => $r->end_date ? $r->end_date->format('Y-m-d') : '',
                 'total_days' => (float) $r->total_days,
                 'reason' => (string) ($r->reason ?? ''),
-                'attachment_url' => $r->attachment_url,
+                'attachment_url' => $attachmentUrl,
                 'status' => $statusStr,
                 'rejection_reason' => $r->rejection_reason,
                 'created_at' => $r->created_at ? $r->created_at->format('Y-m-d H:i:s') : '',
@@ -200,9 +209,10 @@ class LeaveController extends Controller
         $attachmentUrl = null;
         if ($request->hasFile('attachment')) {
             $file = $request->file('attachment');
-            $filename = 'leave_' . $employee->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $ext = $file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg';
+            $filename = 'leave_' . $employee->id . '_' . time() . '.' . $ext;
             $path = $file->storeAs('leave_attachments', $filename, 'public');
-            $attachmentUrl = Storage::url($path);
+            $attachmentUrl = url(Storage::url($path));
         }
 
         $leaveRequest = LeaveRequest::create([

@@ -134,6 +134,9 @@ class ManagerController extends Controller
 
         $status = $request->input('status', 'pending');
         if ($status !== 'all') {
+            if ($status === 'approved') $status = 'disetujui';
+            if ($status === 'rejected') $status = 'ditolak';
+            if ($status === 'cancelled') $status = 'dibatalkan';
             $query->where('status', $status);
         }
 
@@ -149,6 +152,11 @@ class ManagerController extends Controller
             $remainingBalance = $balance ? (float) $balance->remaining_days : 0.0;
             $statusStr = is_object($item->status) ? $item->status->value : (string) $item->status;
 
+            $attachmentUrl = $item->attachment_url;
+            if ($attachmentUrl && ! str_starts_with($attachmentUrl, 'http://') && ! str_starts_with($attachmentUrl, 'https://')) {
+                $attachmentUrl = url($attachmentUrl);
+            }
+
             return [
                 'request_id' => (int) $item->id,
                 'employee' => [
@@ -161,7 +169,7 @@ class ManagerController extends Controller
                 'end_date' => $item->end_date ? $item->end_date->format('Y-m-d') : '',
                 'total_days' => (float) $item->total_days,
                 'reason' => (string) ($item->reason ?? ''),
-                'attachment_url' => $item->attachment_url,
+                'attachment_url' => $attachmentUrl,
                 'status' => $statusStr,
                 'remaining_balance' => $remainingBalance,
             ];
@@ -212,6 +220,19 @@ class ManagerController extends Controller
             $leaveRequest->rejection_reason = $request->input('rejection_reason');
         }
         $leaveRequest->save();
+
+        if ($action === 'approve') {
+            $year = $leaveRequest->start_date ? (int) $leaveRequest->start_date->year : (int) date('Y');
+            $balance = LeaveBalance::where('employee_id', $leaveRequest->employee_id)
+                ->where('leave_type_id', $leaveRequest->leave_type_id)
+                ->where('year', $year)
+                ->first();
+            if ($balance) {
+                $balance->used_days = (float) $balance->used_days + (float) $leaveRequest->total_days;
+                $balance->remaining_days = max(0, (float) $balance->total_days - (float) $balance->used_days);
+                $balance->save();
+            }
+        }
 
         return response()->json([
             'success' => true,
