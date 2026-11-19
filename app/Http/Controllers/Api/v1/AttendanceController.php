@@ -199,11 +199,30 @@ class AttendanceController extends Controller
         $status = 'hadir';
 
         if ($shift && ! empty($shift->start_time)) {
-            $shiftStart = Carbon::createFromTimeString($shift->start_time, 'Asia/Jakarta')->setDateFrom($now);
-            if ($now->greaterThan($shiftStart)) {
-                $lateMinutes = (int) $shiftStart->diffInMinutes($now);
-                if ($lateMinutes > 0) {
+            $shiftStartTime = substr($shift->start_time, 0, 8);
+            $shiftStart = Carbon::createFromTimeString($shiftStartTime, 'Asia/Jakarta')->setDateFrom($now);
+
+            if (! $shift->is_overnight) {
+                // Daytime shift (e.g. Regular 08:00 - 17:00)
+                if ($now->greaterThan($shiftStart)) {
+                    $lateMinutes = (int) $shiftStart->diffInMinutes($now);
+                    if ($lateMinutes > 0) {
+                        $status = 'terlambat';
+                    }
+                } elseif ($now->hour < 6) {
+                    // Check-in between 00:00 and 05:59:
+                    // Middle of the night, way past the 08:00 shift start of the work cycle.
+                    $prevShiftStart = $shiftStart->copy()->subDay();
+                    $lateMinutes = (int) $prevShiftStart->diffInMinutes($now);
                     $status = 'terlambat';
+                }
+            } else {
+                // Overnight shift (e.g. 22:00 - 06:00)
+                if ($now->greaterThan($shiftStart)) {
+                    $lateMinutes = (int) $shiftStart->diffInMinutes($now);
+                    if ($lateMinutes > 0) {
+                        $status = 'terlambat';
+                    }
                 }
             }
         }
@@ -388,19 +407,30 @@ class AttendanceController extends Controller
             ->whereYear('attendance_date', $year)
             ->whereMonth('attendance_date', $month);
 
-        $allMonthRecords = (clone $query)->get();
-
-        $totalPresent = $allMonthRecords->whereIn('status', ['hadir', 'terlambat', 'pulang_cepat'])->count();
-        $totalLate = $allMonthRecords->where('status', 'terlambat')->count();
-        $totalLeave = $allMonthRecords->whereIn('status', ['cuti', 'izin'])->count();
-        $totalSick = $allMonthRecords->where('status', 'sakit')->count();
-
         $attendances = $query->orderBy('attendance_date', 'desc')->get();
 
-        $historyList = $attendances->map(function ($item) {
+        $totalPresent = 0;
+        $totalLate = 0;
+        $totalLeave = 0;
+        $totalSick = 0;
+
+        $historyList = $attendances->map(function ($item) use (&$totalPresent, &$totalLate, &$totalLeave, &$totalSick) {
             $shiftName = $item->workShift
                 ? "{$item->workShift->name} (" . substr($item->workShift->start_time, 0, 5) . " - " . substr($item->workShift->end_time, 0, 5) . ")"
                 : "Regular (08:00 - 17:00)";
+
+            $statusVal = is_object($item->status) ? $item->status->value : (string) $item->status;
+            $lateMins = (int) $item->late_minutes;
+
+            if ($statusVal === 'terlambat' || $statusVal === 'late' || $lateMins > 0) {
+                $totalLate++;
+            } elseif ($statusVal === 'hadir' || $statusVal === 'present') {
+                $totalPresent++;
+            } elseif (in_array($statusVal, ['cuti', 'izin', 'leave', 'permission'])) {
+                $totalLeave++;
+            } elseif (in_array($statusVal, ['sakit', 'sick'])) {
+                $totalSick++;
+            }
 
             return [
                 'id' => (int) $item->id,
@@ -408,8 +438,8 @@ class AttendanceController extends Controller
                 'shift_name' => $shiftName,
                 'check_in_time' => $item->check_in_time ? $item->check_in_time->format('H:i:s') : null,
                 'check_out_time' => $item->check_out_time ? $item->check_out_time->format('H:i:s') : null,
-                'status' => is_object($item->status) ? $item->status->value : (string) $item->status,
-                'late_minutes' => (int) $item->late_minutes,
+                'status' => $statusVal,
+                'late_minutes' => $lateMins,
                 'review_status' => is_object($item->review_status) ? $item->review_status->value : (string) ($item->review_status ?? 'pending'),
                 'review_note' => $item->review_note,
             ];
