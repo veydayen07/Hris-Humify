@@ -91,41 +91,76 @@ class ProfileController extends Controller
             ], 404);
         }
 
-        $validator = Validator::make($request->all(), [
-            'face_photo' => ['required_without:photo', 'file', 'image', 'max:10240'],
-            'photo' => ['nullable', 'file', 'image', 'max:10240'],
-        ]);
+        $file = $request->file('face_photo') ?: $request->file('photo');
+        $base64 = $request->input('face_photo_base64');
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validasi foto gagal. Pastikan berkas berupa gambar (JPG/PNG) maksimal 10MB.',
-                'code' => 'VALIDATION_ERROR',
-                'errors' => $validator->errors(),
-            ], 422);
+        if (! $file && ! $base64) {
+            $inputPhoto = $request->input('face_photo') ?: $request->input('photo');
+            if (is_string($inputPhoto) && (str_starts_with($inputPhoto, 'data:image') || strlen($inputPhoto) > 50)) {
+                $base64 = $inputPhoto;
+            }
         }
 
-        $file = $request->file('face_photo') ?: $request->file('photo');
-
-        if (! $file) {
+        if (! $file && ! $base64) {
             return response()->json([
-                'message' => 'Berkas foto wajah tidak ditemukan dalam request.',
+                'message' => 'Berkas atau data foto wajah tidak ditemukan dalam request.',
                 'code' => 'FILE_MISSING',
                 'errors' => null,
             ], 422);
         }
 
-        // Simpan file ke disk public (storage/app/public/faces/)
-        $filename = 'face_ref_' . $employee->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-        $path = $file->storeAs('faces', $filename, 'public');
-        $photoUrl = url(Storage::url($path));
+        $now = Carbon::now('Asia/Jakarta');
+        $timestamp = time();
+
+        if ($file) {
+            $validator = Validator::make(['photo' => $file], [
+                'photo' => ['file', 'image', 'max:10240'],
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Validasi foto gagal. Pastikan berkas berupa gambar (JPG/PNG) maksimal 10MB.',
+                    'code' => 'VALIDATION_ERROR',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $ext = $file->getClientOriginalExtension() ?: 'jpg';
+            $filename = 'face_ref_' . $employee->id . '_' . $timestamp . '.' . $ext;
+            $path = $file->storeAs('faces', $filename, 'public');
+            $photoUrl = url(Storage::url($path));
+        } else {
+            // Proses base64 image data
+            $ext = 'jpg';
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64, $type)) {
+                $base64 = substr($base64, strpos($base64, ',') + 1);
+                $ext = strtolower($type[1]);
+                if ($ext === 'jpeg') {
+                    $ext = 'jpg';
+                }
+            }
+
+            $binaryData = base64_decode($base64);
+            if ($binaryData === false || strlen($binaryData) < 20) {
+                return response()->json([
+                    'message' => 'Format base64 data foto wajah tidak valid.',
+                    'code' => 'INVALID_BASE64',
+                    'errors' => null,
+                ], 422);
+            }
+
+            $filename = 'face_ref_' . $employee->id . '_' . $timestamp . '.' . $ext;
+            Storage::disk('public')->put('faces/' . $filename, $binaryData);
+            $photoUrl = url(Storage::url('faces/' . $filename));
+        }
 
         // Update database karyawan
-        $now = Carbon::now('Asia/Jakarta');
         $employee->update([
             'face_reference_photo_url' => $photoUrl,
             'photo_url' => $photoUrl,
             'face_registered_at' => $now,
         ]);
+        $employee->refresh();
 
         return response()->json([
             'success' => true,
@@ -135,7 +170,7 @@ class ProfileController extends Controller
                 'photo_url' => $photoUrl,
                 'face_registered' => true,
                 'face_registered_at' => $now->format('Y-m-d H:i:s'),
-                'employee' => EmployeeDataFormatter::formatEmployee($employee->fresh()),
+                'employee' => EmployeeDataFormatter::formatEmployee($employee),
             ],
         ]);
     }

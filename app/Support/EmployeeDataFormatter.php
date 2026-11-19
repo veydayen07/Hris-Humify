@@ -28,7 +28,7 @@ class EmployeeDataFormatter
             'birth_place' => (string) ($employee->birth_place ?? ''),
             'birth_date' => $employee->birth_date ? $employee->birth_date->format('Y-m-d') : null,
             'address' => (string) ($employee->address ?? ''),
-            'photo_url' => $employee->photo_url,
+            'photo_url' => $employee->photo_url ?: $employee->face_reference_photo_url,
             'face_registered' => $faceRegistered,
             'department' => $employee->department ? [
                 'id' => (int) $employee->department->id,
